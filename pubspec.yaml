@@ -1,0 +1,35 @@
+name: agroledger
+description: "A new Flutter project for AgroLedger."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.6
+  flutter_bloc: ^8.1.5
+  get_it: ^7.6.7
+  dio: ^5.4.3+1
+  isar: ^3.1.0+1
+  isar_flutter_libs: ^3.1.0+1
+  path_provider: ^2.1.2
+  shared_preferences: ^2.2.2
+  equatable: ^2.0.5
+  dartz: ^0.10.1
+  json_annotation: ^4.8.1
+  intl: ^0.19.0
+  flutter_secure_storage: ^9.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+  build_runner: ^2.4.9
+  isar_generator: ^3.1.0+1
+  json_serializable: ^6.7.1
+
+flutter:
+  uses-material-design: true

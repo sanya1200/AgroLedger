@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+.env
+
+# Flutter/Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+build/
+*.utils
+
+# IDEs
+.idea/
+.vscode/
+*.iml
+*.swp
+*.orig
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker logs
+*.log
+docker-compose.override.yml
