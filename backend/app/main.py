@@ -5,19 +5,22 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 from app.core.database import engine, Base
-# Используем явные префиксы для импорта роутеров
-from app.routers import auth as auth_router
-from app.routers import business as business_router
-from app.routers import calculator as calculator_router
-from app.routers import marketplace as marketplace_router
+# Импортируем модули роутеров с уникальными именами
+import app.routers.auth as auth_mod
+import app.routers.business as business_mod
+import app.routers.calculator as calculator_mod
+import app.routers.marketplace as marketplace_mod
 
-# Импорт моделей для автоматического создания таблиц (используем префикс, чтобы не было конфликта)
-from app.models import user, business_profile, calculator, marketplace
+# Импортируем модели для создания таблиц
+import app.models.user
+import app.models.business_profile
+import app.models.calculator
+import app.models.marketplace
 
-# Create database tables
+# Создаем таблицы в БД
 Base.metadata.create_all(bind=engine)
 
-# Setup logging
+# Настройка логирования
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -29,7 +32,6 @@ app = FastAPI(
     openapi_url=f"{settings.API_V1_STR}/openapi.json"
 )
 
-# Set all configured origins
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -38,55 +40,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include Routers - используем переменные с постфиксом _router
-app.include_router(
-    auth_router.router,
-    prefix=f"{settings.API_V1_STR}/auth",
-    tags=["Authentication"]
-)
-app.include_router(
-    business_router.router,
-    prefix=f"{settings.API_V1_STR}/business",
-    tags=["Business Profile"]
-)
-app.include_router(
-    calculator_router.router,
-    prefix=f"{settings.API_V1_STR}/calculator",
-    tags=["Calculator"]
-)
-app.include_router(
-    marketplace_router.router,
-    prefix=f"{settings.API_V1_STR}/marketplace",
-    tags=["Marketplace"]
-)
-
+# Подключаем роутеры через созданные алиасы
+app.include_router(auth_mod.router, prefix=f"{settings.API_V1_STR}/auth", tags=["Authentication"])
+app.include_router(business_mod.router, prefix=f"{settings.API_V1_STR}/business", tags=["Business Profile"])
+app.include_router(calculator_mod.router, prefix=f"{settings.API_V1_STR}/calculator", tags=["Calculator"])
+app.include_router(marketplace_mod.router, prefix=f"{settings.API_V1_STR}/marketplace", tags=["Marketplace"])
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    """
-    Global exception handler to catch all unhandled exceptions.
-    """
     logger.error(f"Unhandled exception: {exc}", exc_info=True)
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content={
-            "detail": "An internal server error occurred. Our team has been notified.",
-            "error_type": type(exc).__name__
-        },
+        content={"detail": "Internal server error", "error_type": type(exc).__name__},
     )
 
-
-@app.get("/api/v1/healthcheck", status_code=status.HTTP_200_OK)
+@app.get("/api/v1/healthcheck")
 async def health_check():
-    """
-    Endpoint to check if the server is up and running.
-    """
-    return {
-        "status": "healthy",
-        "project": settings.PROJECT_NAME,
-        "version": "1.0.0"
-    }
-
+    return {"status": "healthy", "project": settings.PROJECT_NAME}
 
 if __name__ == "__main__":
     import uvicorn
