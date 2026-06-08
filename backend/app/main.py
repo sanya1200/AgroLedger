@@ -5,8 +5,14 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 from app.core.database import engine, Base
-from app.routers import auth, business, calculator, marketplace
-from app.models import user, business_profile, calculator as calculator_models, marketplace as marketplace_models # Исправлено
+# Используем явные префиксы для импорта роутеров
+from app.routers import auth as auth_router
+from app.routers import business as business_router
+from app.routers import calculator as calculator_router
+from app.routers import marketplace as marketplace_router
+
+# Импорт моделей для автоматического создания таблиц (используем префикс, чтобы не было конфликта)
+from app.models import user, business_profile, calculator, marketplace
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -32,24 +38,24 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include Routers
+# Include Routers - используем переменные с постфиксом _router
 app.include_router(
-    auth.router,
+    auth_router.router,
     prefix=f"{settings.API_V1_STR}/auth",
     tags=["Authentication"]
 )
 app.include_router(
-    business.router,
+    business_router.router,
     prefix=f"{settings.API_V1_STR}/business",
     tags=["Business Profile"]
 )
 app.include_router(
-    calculator.router,
+    calculator_router.router,
     prefix=f"{settings.API_V1_STR}/calculator",
     tags=["Calculator"]
 )
 app.include_router(
-    marketplace.router,
+    marketplace_router.router,
     prefix=f"{settings.API_V1_STR}/marketplace",
     tags=["Marketplace"]
 )
@@ -59,7 +65,6 @@ app.include_router(
 async def global_exception_handler(request: Request, exc: Exception):
     """
     Global exception handler to catch all unhandled exceptions.
-    Logs the error and returns a clean 500 response.
     """
     logger.error(f"Unhandled exception: {exc}", exc_info=True)
     return JSONResponse(
