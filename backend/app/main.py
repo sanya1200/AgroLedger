@@ -4,7 +4,12 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
+from app.core.database import engine, Base
 from app.routers import auth, business, calculator, marketplace
+from app.models import user, business_profile, calculator, marketplace # Импорт моделей для создания
+
+# Create database tables
+Base.metadata.create_all(bind=engine)
 
 # Setup logging
 logging.basicConfig(
