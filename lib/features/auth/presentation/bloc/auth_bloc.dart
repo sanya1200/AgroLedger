@@ -79,13 +79,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     final token = await _storage.read(key: 'access_token');
     if (token != null) {
       try {
-        // Mocking fetching user data with token
-        // In a real app, you'd call an API like /auth/me
-        // For now, if token exists, we'll try to get the profile
-        // Since we don't have a dedicated "me" method in DataSource yet, 
-        // I'll emit Unauthenticated if anything fails.
-        emit(AuthUnauthenticated()); 
+        final user = await _authRemoteDataSource.getMe();
+        emit(AuthAuthenticated(user)); 
       } catch (_) {
+        await _storage.delete(key: 'access_token');
         emit(AuthUnauthenticated());
       }
     } else {

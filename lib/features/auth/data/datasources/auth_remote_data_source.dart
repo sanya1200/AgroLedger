@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:agroledger/core/network/dio_client.dart';
 import 'package:agroledger/features/auth/data/models/user_model.dart';
 
@@ -10,12 +11,14 @@ abstract class AuthRemoteDataSource {
     String? phone,
     required String role,
   });
+  Future<UserModel> getMe();
 }
 
 class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   final DioClient _client;
+  final FlutterSecureStorage _storage;
 
-  AuthRemoteDataSourceImpl(this._client);
+  AuthRemoteDataSourceImpl(this._client, this._storage);
 
   @override
   Future<UserModel> login(String email, String password) async {
@@ -23,34 +26,24 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       final response = await _client.dio.post(
         'auth/login',
         data: {
-          'username': email, // Backend expects username for OAuth2 form
+          'username': email,
           'password': password,
         },
         options: Options(contentType: Headers.formUrlEncodedContentType),
       );
 
-      // The login response for OAuth2 usually returns {access_token, token_type}
-      // We might need a separate call to get user info or the token contains it.
-      // However, our backend register returns UserResponse.
-      // Let's assume there is a way to get user data.
-      // In a real scenario, we might have /auth/me
-      // But for this task, I will assume login returns user data or we fetch it.
-      // Since the prompt asks to return UserModel, I'll mock the extraction or assume a structure.
-      
-      // If the backend returns { "access_token": "...", "token_type": "bearer" }
-      // We need to store the token. The BLoC will handle storing it.
-      // Let's assume there is an endpoint to get user info after login.
-      
-      // For now, I'll implement it as described.
       if (response.statusCode == 200) {
-        // Here we would typically fetch the user profile with the new token
-        final userResponse = await _client.dio.get('business/me'); 
-        return UserModel.fromJson(userResponse.data);
+        final token = response.data['access_token'];
+        await _storage.write(key: 'access_token', value: token);
+        
+        // After saving token, we can get user info
+        return await getMe();
       } else {
-        throw Exception('Failed to login');
+        throw Exception('Ошибка входа');
       }
     } on DioException catch (e) {
-      throw Exception(e.response?.data['detail'] ?? 'Network error');
+      final message = e.response?.data['detail'] ?? 'Ошибка сети';
+      throw Exception(message);
     }
   }
 
@@ -73,12 +66,24 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       );
 
       if (response.statusCode == 201) {
-        return UserModel.fromJson(response.data);
+        // After registration, we automatically login to get the token
+        return await login(email, password);
       } else {
-        throw Exception('Failed to register');
+        throw Exception('Ошибка регистрации');
       }
     } on DioException catch (e) {
-      throw Exception(e.response?.data['detail'] ?? 'Registration error');
+      final message = e.response?.data['detail'] ?? 'Ошибка при регистрации';
+      throw Exception(message);
+    }
+  }
+
+  @override
+  Future<UserModel> getMe() async {
+    try {
+      final response = await _client.dio.get('auth/me');
+      return UserModel.fromJson(response.data);
+    } on DioException catch (e) {
+      throw Exception(e.response?.data['detail'] ?? 'Ошибка авторизации');
     }
   }
 }

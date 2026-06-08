@@ -39,8 +39,10 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Scaffold(
-      body: BlocConsumer<AuthBloc, AuthState>(
+    return PopScope(
+      canPop: false, // Запрещаем закрывать приложение кнопкой "Назад" на этом экране
+      child: Scaffold(
+        body: BlocConsumer<AuthBloc, AuthState>(
         listener: (context, state) {
           if (state is AuthFailureState) {
             ScaffoldMessenger.of(context).showSnackBar(

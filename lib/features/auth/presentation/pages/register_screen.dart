@@ -40,7 +40,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   String? _validatePassword(String? value) {
     if (value == null || value.isEmpty) return 'Введите пароль';
-    if (value.length < 6) return 'Пароль должен быть не менее 6 символов';
+    if (value.length < 8) return 'Пароль должен быть не менее 8 символов';
     return null;
   }
 

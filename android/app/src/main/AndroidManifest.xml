@@ -6,6 +6,12 @@
         android:label="AgroLedger"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+
+        <!-- Отключаем Impeller для стабильности на Samsung Exynos -->
+        <meta-data
+            android:name="io.flutter.embedding.android.EnableImpeller"
+            android:value="false" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true"

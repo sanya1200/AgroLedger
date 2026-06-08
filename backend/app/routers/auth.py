@@ -11,6 +11,8 @@ from app.models.user import User
 from app.schemas.user import UserCreate, UserResponse
 from app.schemas.token import Token
 
+from app.core.dependencies import get_current_user # Добавлен импорт
+
 router = APIRouter()
 
 
@@ -79,3 +81,13 @@ def login(
         "access_token": access_token,
         "token_type": "bearer"
     }
+
+
+@router.get("/me", response_model=UserResponse)
+def get_me(
+    current_user: User = Depends(get_current_user)
+) -> Any:
+    """
+    Получение информации о текущем пользователе.
+    """
+    return current_user
