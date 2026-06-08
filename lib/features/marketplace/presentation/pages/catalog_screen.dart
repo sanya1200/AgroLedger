@@ -150,7 +150,7 @@ class _ProductCard extends StatelessWidget {
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
               ),
               child: product.imageUrl != null
-                  ? Image.network(product.imageUrl!, fit: BoxImage.cover)
+                  ? Image.network(product.imageUrl!, fit: BoxFit.cover)
                   : Icon(Icons.inventory_2_outlined, size: 50, color: Colors.green[800]),
             ),
           ),

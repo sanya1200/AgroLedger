@@ -89,7 +89,7 @@ class _CyclesListScreenState extends State<CyclesListScreen> {
               itemBuilder: (context, index) {
                 final cycle = state.cycles[index];
                 return Card(
-                  margin: const EdgeInsets.bottom(12),
+                  margin: const EdgeInsets.only(bottom: 12),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   child: ListTile(
                     contentPadding: const EdgeInsets.all(16),
