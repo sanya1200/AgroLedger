@@ -17,28 +17,6 @@ subprojects {
 }
 
 subprojects {
-    afterEvaluate {
-        val project = this
-        if (project.plugins.hasPlugin("com.android.library")) {
-            val android = project.extensions.findByName("android")
-            if (android != null) {
-                try {
-                    val getNamespace = android.javaClass.getMethod("getNamespace")
-                    val setNamespace = android.javaClass.getMethod("setNamespace", String::class.java)
-                    if (getNamespace.invoke(android) == null) {
-                        if (project.name == "isar_flutter_libs") {
-                            setNamespace.invoke(android, "dev.isar.isar_flutter_libs")
-                        }
-                    }
-                } catch (e: Exception) {
-                    // Ignore errors if the methods aren't available
-                }
-            }
-        }
-    }
-}
-
-subprojects {
     project.evaluationDependsOn(":app")
 }
 

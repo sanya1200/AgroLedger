@@ -10,12 +10,16 @@ import 'package:agroledger/features/marketplace/presentation/bloc/marketplace_bl
 import 'package:agroledger/features/calculator/presentation/bloc/calculator_bloc.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  
-  // Initialize Dependency Injection
-  await initServiceLocator();
-  
-  runApp(const AgroLedgerApp());
+  // Добавляем try-catch для отлова критических ошибок при старте
+  try {
+    WidgetsFlutterBinding.ensureInitialized();
+    await initServiceLocator();
+    runApp(const AgroLedgerApp());
+  } catch (e) {
+    debugPrint("CRITICAL STARTUP ERROR: $e");
+    // Если всё совсем плохо, запускаем минимальное приложение с ошибкой
+    runApp(MaterialApp(home: Scaffold(body: Center(child: Text("Ошибка запуска: $e")))));
+  }
 }
 
 class AgroLedgerApp extends StatelessWidget {
@@ -30,27 +34,8 @@ class AgroLedgerApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
           useMaterial3: true,
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: Colors.green[800]!,
-            primary: Colors.green[800],
-            secondary: Colors.teal,
-          ),
+          colorScheme: ColorScheme.fromSeed(seedColor: Colors.green[800]!),
           textTheme: GoogleFonts.latoTextTheme(),
-          inputDecorationTheme: InputDecorationTheme(
-            filled: true,
-            fillColor: Colors.grey[50],
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey[300]!),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.green[800]!, width: 2),
-            ),
-          ),
         ),
         home: const AuthenticationWrapper(),
       ),
@@ -68,9 +53,7 @@ class AuthenticationWrapper extends StatelessWidget {
         if (state is AuthAuthenticated) {
           return const MainNavigationScreen();
         } else if (state is AuthLoading) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
+          return const Scaffold(body: Center(child: CircularProgressIndicator()));
         } else {
           return const LoginScreen();
         }
@@ -88,7 +71,6 @@ class MainNavigationScreen extends StatefulWidget {
 
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _currentIndex = 0;
-
   final List<Widget> _screens = [
     const CatalogScreen(),
     const CyclesListScreen(),
@@ -103,31 +85,15 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         BlocProvider(create: (context) => sl<CalculatorBloc>()),
       ],
       child: Scaffold(
-        body: IndexedStack(
-          index: _currentIndex,
-          children: _screens,
-        ),
+        body: IndexedStack(index: _currentIndex, children: _screens),
         bottomNavigationBar: BottomNavigationBar(
           currentIndex: _currentIndex,
           onTap: (index) => setState(() => _currentIndex = index),
           selectedItemColor: Colors.green[800],
-          unselectedItemColor: Colors.grey,
           items: const [
-            BottomNavigationBarItem(
-              icon: Icon(Icons.shopping_bag_outlined),
-              activeIcon: Icon(Icons.shopping_bag),
-              label: 'Маркет',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.calculate_outlined),
-              activeIcon: Icon(Icons.calculate),
-              label: 'Калькулятор',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.person_outline),
-              activeIcon: Icon(Icons.person),
-              label: 'Профиль',
-            ),
+            BottomNavigationBarItem(icon: Icon(Icons.shopping_bag), label: 'Маркет'),
+            BottomNavigationBarItem(icon: Icon(Icons.calculate), label: 'Калькулятор'),
+            BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Профиль'),
           ],
         ),
       ),
@@ -137,38 +103,31 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
-
   @override
   Widget build(BuildContext context) {
-    final user = (context.read<AuthBloc>().state as AuthAuthenticated).user;
-    
-    return Scaffold(
-      appBar: AppBar(title: const Text('Профиль')),
-      body: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          children: [
-            const CircleAvatar(
-              radius: 50,
-              backgroundColor: Colors.green,
-              child: Icon(Icons.person, size: 50, color: Colors.white),
+    return BlocBuilder<AuthBloc, AuthState>(
+      builder: (context, state) {
+        final email = state is AuthAuthenticated ? state.user.email : "Гость";
+        return Scaffold(
+          appBar: AppBar(title: const Text('Профиль')),
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.account_circle, size: 80, color: Colors.green),
+                const SizedBox(height: 16),
+                Text(email, style: const TextStyle(fontSize: 18)),
+                const SizedBox(height: 40),
+                ElevatedButton(
+                  onPressed: () => context.read<AuthBloc>().add(AuthLogoutRequested()),
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red[50], foregroundColor: Colors.red),
+                  child: const Text('Выйти из аккаунта'),
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
-            Text(user.email, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-            Text(user.role == 'business' ? 'Фермерское хозяйство' : 'Покупатель'),
-            const Spacer(),
-            ElevatedButton(
-              onPressed: () => context.read<AuthBloc>().add(AuthLogoutRequested()),
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size(double.infinity, 50),
-                backgroundColor: Colors.red[50],
-                foregroundColor: Colors.red,
-              ),
-              child: const Text('Выйти из аккаунта'),
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }
