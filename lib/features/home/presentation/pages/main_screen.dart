@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:agroledger/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:agroledger/features/auth/data/models/user_model.dart';
 import 'package:agroledger/features/marketplace/presentation/pages/catalog_screen.dart';
 import 'package:agroledger/features/calculator/presentation/pages/cycles_list_screen.dart';
 import 'package:agroledger/core/theme/app_colors.dart';

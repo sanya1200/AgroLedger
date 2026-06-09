@@ -98,7 +98,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       final response = await _client.dio.get('auth/me');
       final data = response.data;
       if (data is Map && (data['success'] == true)) {
-        return UserModel.fromJson(data);
+        return UserModel.fromJson(Map<String, dynamic>.from(data));
       } else {
         final error = (data is Map) ? (data['error'] ?? 'Ошибка получения данных') : 'Ошибка получения данных';
         throw Exception(error);
@@ -125,5 +125,4 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     }
     return Exception(message);
   }
-}
 }
