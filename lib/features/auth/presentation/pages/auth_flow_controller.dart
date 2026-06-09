@@ -56,13 +56,13 @@ class _AuthFlowControllerState extends State<AuthFlowController> {
 
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, state) {
-        if (state.status == AuthStatus.authorized) {
-          final user = state.user;
-          if (user != null && user.role == 'farmer_business' && !user.hasBusinessProfile) {
-            return const BusinessSetupScreen();
-          }
-          return const MainScreen();
-        }
+        switch (state.status) {
+          case AuthStatus.authorized:
+            final user = state.user;
+            if (user != null && user.role == 'farmer_business' && !user.hasBusinessProfile) {
+              return const BusinessSetupScreen();
+            }
+            return const MainScreen();
           
           case AuthStatus.authenticated:
             return FutureBuilder<String?>(
@@ -76,10 +76,6 @@ class _AuthFlowControllerState extends State<AuthFlowController> {
 
           case AuthStatus.unauthenticated:
           case AuthStatus.failure:
-            // Only show login if it's a real unauth or if we are not in loading/authenticated states
-            if (state.status == AuthStatus.failure && state.user != null) {
-              // If failure happened but we have a user, it's likely a PIN error, handled in PinScreen
-            }
             return const LoginScreen();
 
           case AuthStatus.loading:

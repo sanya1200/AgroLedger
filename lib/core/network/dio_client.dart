@@ -34,10 +34,12 @@ class DioClient {
                   final response = await Dio().post(
                     '${_dio.options.baseUrl}auth/refresh',
                     queryParameters: {'refresh_token': refreshToken},
-                    headers: {
-                      'X-Device-Fingerprint': 'agro_device_id_default',
-                      'X-Device-Name': 'Mobile App',
-                    },
+                    options: Options(
+                      headers: {
+                        'X-Device-Fingerprint': 'agro_device_id_default',
+                        'X-Device-Name': 'Mobile App',
+                      },
+                    ),
                   );
                   
                   if (response.data['success'] == true) {
