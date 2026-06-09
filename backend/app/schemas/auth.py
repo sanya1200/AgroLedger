@@ -1,6 +1,7 @@
+from __future__ import annotations
 import re
 from datetime import datetime
-from typing import Optional, Any, Generic, TypeVar
+from typing import Optional, Any, Generic, TypeVar, Union
 from pydantic import BaseModel, EmailStr, Field, ConfigDict, field_validator
 
 T = TypeVar('T')
@@ -52,9 +53,9 @@ class UserDetailResponse(BaseModel):
     id: int
     email: EmailStr
     phone: str
-    full_name: Optional[str]
+    full_name: Optional[str] = None
     role: str
-    is_biometric_enabled: bool
-    is_verified: bool
-    created_at: datetime
+    is_biometric_enabled: bool = False
+    is_verified: bool = False
+    created_at: Optional[datetime] = Field(default=None)
     has_business_profile: bool = False

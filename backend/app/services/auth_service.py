@@ -27,12 +27,14 @@ class AuthService:
             )
 
         try:
+            from datetime import datetime, timezone
             new_user = User(
                 email=data.email,
                 phone=data.phone,
                 full_name=data.full_name,
                 hashed_password=get_password_hash(data.password),
-                role=str(data.role)
+                role=str(data.role),
+                created_at=datetime.now(timezone.utc)
             )
             return self.repo.create_user(new_user)
         except Exception as e:
