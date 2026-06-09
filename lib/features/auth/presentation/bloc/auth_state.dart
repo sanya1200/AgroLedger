@@ -20,6 +20,16 @@ class AuthAuthenticated extends AuthState {
   List<Object?> get props => [user];
 }
 
+/// New state: User is fully authorized (passed PIN/Biometric)
+class AuthAuthorized extends AuthState {
+  final UserModel user;
+
+  const AuthAuthorized(this.user);
+
+  @override
+  List<Object?> get props => [user];
+}
+
 class AuthUnauthenticated extends AuthState {}
 
 class AuthFailureState extends AuthState {

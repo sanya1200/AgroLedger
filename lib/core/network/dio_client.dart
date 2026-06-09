@@ -8,8 +8,7 @@ class DioClient {
   DioClient(this._dio, this._storage) {
     _dio
       ..options.baseUrl = 'https://agroledger-zlxo.onrender.com/api/v1/'
-          '' // Standard for Android Emulator
-      ..options.connectTimeout = const Duration(seconds: 10)
+      ..options.connectTimeout = const Duration(seconds: 15)
       ..options.receiveTimeout = const Duration(seconds: 10)
       ..options.headers = {
         'Content-Type': 'application/json',

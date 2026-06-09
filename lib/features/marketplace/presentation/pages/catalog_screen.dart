@@ -41,7 +41,14 @@ class _CatalogScreenState extends State<CatalogScreen> {
       ),
       floatingActionButton: BlocBuilder<AuthBloc, AuthState>(
         builder: (context, authState) {
-          if (authState is AuthAuthenticated && authState.user.role == 'business') {
+          bool isBusiness = false;
+          if (authState is AuthAuthenticated) {
+            isBusiness = authState.user.role == 'farmer_business';
+          } else if (authState is AuthAuthorized) {
+            isBusiness = authState.user.role == 'farmer_business';
+          }
+
+          if (isBusiness) {
             return FloatingActionButton(
               onPressed: () => Navigator.push(
                 context,

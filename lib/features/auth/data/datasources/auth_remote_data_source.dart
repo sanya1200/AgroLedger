@@ -41,35 +41,21 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         options: Options(headers: _getDeviceHeaders()),
       );
 
-      final bool success = (response.data is Map) ? (response.data['success'] ?? false) : false;
-      if (success) {
-        final tokenData = response.data['data'];
-        await _storage.write(key: 'access_token', value: tokenData['access_token']);
-        await _storage.write(key: 'refresh_token', value: tokenData['refresh_token']);
-        
-        return await getMe();
+      final data = response.data;
+      if (data is Map && (data['success'] == true)) {
+        final tokenData = data['data'];
+        if (tokenData != null) {
+          await _storage.write(key: 'access_token', value: tokenData['access_token']);
+          await _storage.write(key: 'refresh_token', value: tokenData['refresh_token']);
+          return await getMe();
+        }
+        throw Exception('Server returned success but no token data');
       } else {
-        final error = (response.data is Map) ? (response.data['error'] ?? 'Ошибка входа') : 'Ошибка входа';
+        final error = (data is Map) ? (data['error'] ?? 'Ошибка входа') : 'Ошибка входа';
         throw Exception(error);
       }
     } on DioException catch (e) {
-      final responseData = e.response?.data;
-      final statusCode = e.response?.statusCode;
-      String message = 'Ошибка сети ($statusCode)';
-
-      // Log full error for debugging
-      print('--- Login Debug Info ---');
-      print('Status Code: $statusCode');
-      print('Response Data: $responseData');
-      print('Error message: ${e.message}');
-      print('-------------------------');
-
-      if (responseData is Map) {
-        message = responseData['error'] ?? responseData['detail']?.toString() ?? 'Ошибка входа ($statusCode)';
-      } else if (responseData is String && responseData.isNotEmpty) {
-        message = responseData;
-      }
-      throw Exception(message);
+      throw _handleDioError(e, 'входа');
     }
   }
 
@@ -93,32 +79,16 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         },
       );
 
-      final bool success = (response.data is Map) ? (response.data['success'] ?? false) : false;
-      if (success) {
+      final data = response.data;
+      if (data is Map && (data['success'] == true)) {
         // Automatically login after signup
         return await login(email, password);
       } else {
-        final error = (response.data is Map) ? (response.data['error'] ?? 'Ошибка регистрации') : 'Ошибка регистрации';
+        final error = (data is Map) ? (data['error'] ?? 'Ошибка регистрации') : 'Ошибка регистрации';
         throw Exception(error);
       }
     } on DioException catch (e) {
-      final responseData = e.response?.data;
-      final statusCode = e.response?.statusCode;
-      String message = 'Ошибка сети ($statusCode)';
-      
-      // Log full error for debugging
-      print('--- Signup Debug Info ---');
-      print('Status Code: $statusCode');
-      print('Response Data: $responseData');
-      print('Error message: ${e.message}');
-      print('-------------------------');
-
-      if (responseData is Map) {
-        message = responseData['error'] ?? responseData['detail']?.toString() ?? 'Ошибка сервера ($statusCode)';
-      } else if (responseData is String && responseData.isNotEmpty) {
-        message = responseData;
-      }
-      throw Exception(message);
+      throw _handleDioError(e, 'регистрации');
     }
   }
 
@@ -126,31 +96,34 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   Future<UserModel> getMe() async {
     try {
       final response = await _client.dio.get('auth/me');
-      final bool success = (response.data is Map) ? (response.data['success'] ?? false) : false;
-      if (success) {
-        return UserModel.fromJson(response.data);
+      final data = response.data;
+      if (data is Map && (data['success'] == true)) {
+        return UserModel.fromJson(data);
       } else {
-        final error = (response.data is Map) ? (response.data['error'] ?? 'Ошибка получения данных') : 'Ошибка получения данных';
+        final error = (data is Map) ? (data['error'] ?? 'Ошибка получения данных') : 'Ошибка получения данных';
         throw Exception(error);
       }
     } on DioException catch (e) {
-      final responseData = e.response?.data;
-      final statusCode = e.response?.statusCode;
-      String message = 'Ошибка авторизации ($statusCode)';
-
-      // Log full error for debugging
-      print('--- GetMe Debug Info ---');
-      print('Status Code: $statusCode');
-      print('Response Data: $responseData');
-      print('Error message: ${e.message}');
-      print('-------------------------');
-
-      if (responseData is Map) {
-        message = responseData['error'] ?? responseData['detail']?.toString() ?? 'Ошибка сессии ($statusCode)';
-      } else if (responseData is String && responseData.isNotEmpty) {
-        message = responseData;
-      }
-      throw Exception(message);
+      throw _handleDioError(e, 'авторизации');
     }
   }
+
+  Exception _handleDioError(DioException e, String action) {
+    final responseData = e.response?.data;
+    final statusCode = e.response?.statusCode;
+    String message = 'Ошибка $action ($statusCode)';
+
+    print('--- Auth Debug Info ($action) ---');
+    print('Status Code: $statusCode');
+    print('Response Data: $responseData');
+    print('-------------------------');
+
+    if (responseData is Map) {
+      message = responseData['error'] ?? responseData['detail']?.toString() ?? 'Ошибка сервера ($statusCode)';
+    } else if (responseData is String && responseData.isNotEmpty) {
+      message = responseData;
+    }
+    return Exception(message);
+  }
+}
 }

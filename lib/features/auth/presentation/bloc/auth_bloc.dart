@@ -35,6 +35,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     if (token != null) {
       try {
         final user = await _authRemoteDataSource.getMe();
+        // If we want to support session persistence for PIN, we could check a 'is_pin_verified' flag here.
+        // For now, any fresh start requires PIN if it exists.
         emit(AuthAuthenticated(user));
       } catch (_) {
         await _storage.delete(key: 'access_token');
@@ -86,9 +88,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       final hashedPin = Crypt.sha256(event.pin).toString();
       await _storage.write(key: 'user_pin_hash', value: hashedPin);
       
-      // Notify state or proceed
       final user = await _authRemoteDataSource.getMe();
-      emit(AuthAuthenticated(user));
+      emit(AuthAuthorized(user)); // Directly authorized after setup
     } catch (e) {
       emit(AuthFailureState("Ошибка при установке ПИН-кода"));
     }
@@ -103,7 +104,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     if (savedHash != null && Crypt(savedHash).match(event.pin)) {
       try {
         final user = await _authRemoteDataSource.getMe();
-        emit(AuthAuthenticated(user));
+        emit(AuthAuthorized(user)); // Authorized after correct PIN
       } catch (e) {
         emit(AuthFailureState("Ошибка сессии. Пожалуйста, войдите снова."));
       }
@@ -121,7 +122,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       final token = await _storage.read(key: 'access_token');
       if (token != null) {
         final user = await _authRemoteDataSource.getMe();
-        emit(AuthAuthenticated(user));
+        emit(AuthAuthorized(user)); // Authorized after biometric
       } else {
         emit(AuthFailureState("Сессия истекла. Войдите по паролю."));
       }

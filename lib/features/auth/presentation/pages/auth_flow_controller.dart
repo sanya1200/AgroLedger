@@ -6,6 +6,7 @@ import '../bloc/auth_bloc.dart';
 import 'onboarding_screen.dart';
 import 'login_screen.dart';
 import 'pin_code_screen.dart';
+import 'package:agroledger/features/home/presentation/pages/main_screen.dart';
 import 'package:agroledger/core/di/service_locator.dart';
 
 class AuthFlowController extends StatefulWidget {
@@ -30,10 +31,6 @@ class _AuthFlowControllerState extends State<AuthFlowController> {
     // Check if onboarding was already shown
     final isFirst = prefs.getBool('is_first_launch') ?? true;
     
-    if (isFirst) {
-      await prefs.setBool('is_first_launch', false);
-    }
-
     if (mounted) {
       setState(() {
         _isFirstLaunch = isFirst;
@@ -41,6 +38,16 @@ class _AuthFlowControllerState extends State<AuthFlowController> {
       });
       // Trigger token check in BLoC
       context.read<AuthBloc>().add(AuthCheckStatusRequested());
+    }
+  }
+
+  Future<void> _finishOnboarding() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('is_first_launch', false);
+    if (mounted) {
+      setState(() {
+        _isFirstLaunch = false;
+      });
     }
   }
 
@@ -55,11 +62,17 @@ class _AuthFlowControllerState extends State<AuthFlowController> {
     }
 
     if (_isFirstLaunch == true) {
-      return const OnboardingScreen();
+      return OnboardingScreen(
+        onFinish: _finishOnboarding,
+      );
     }
 
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, state) {
+        if (state is AuthAuthorized) {
+          return const MainScreen();
+        }
+
         if (state is AuthAuthenticated) {
           return FutureBuilder<String?>(
             future: sl<FlutterSecureStorage>().read(key: 'user_pin_hash'),
@@ -74,8 +87,6 @@ class _AuthFlowControllerState extends State<AuthFlowController> {
               }
               
               // If user is authenticated and has PIN, verify it
-              // In a real app, you might want a state to track if PIN was verified in current session.
-              // For simplicity, we show Verify screen.
               return const PinCodeScreen(mode: PinMode.verify);
             },
           );

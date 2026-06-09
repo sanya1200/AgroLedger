@@ -1,9 +1,11 @@
 from fastapi import APIRouter, Depends, Header, Request, status
 from sqlalchemy.orm import Session
 from app.core.database import get_db
+from app.core.dependencies import get_current_user
+from app.models.user import User
 from app.schemas.auth import BaseResponse, SignUpRequest, SignInRequest, TokenResponse, UserDetailResponse, PinSetupRequest
 from app.services.auth_service import AuthService
-from app.core.security import verify_token, get_password_hash
+from app.core.security import get_password_hash
 from app.repositories.user_repository import UserRepository
 
 router = APIRouter()
@@ -54,27 +56,15 @@ def refresh(
 @router.post("/pin-setup", response_model=BaseResponse[str])
 def pin_setup(
     data: PinSetupRequest,
-    authorization: str = Header(...),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """Sets a 4-digit PIN code for quick biometric/PIN entry."""
-    token = authorization.replace("Bearer ", "")
-    payload = verify_token(token)
-    user_id = int(payload["sub"])
-
     repo = UserRepository(db)
-    repo.update_user_pin(user_id, get_password_hash(data.pin_code))
+    repo.update_user_pin(current_user.id, get_password_hash(data.pin_code))
     return BaseResponse(data="PIN successfully set")
 
 @router.get("/me", response_model=BaseResponse[UserDetailResponse])
-def get_me(authorization: str = Header(...), db: Session = Depends(get_db)):
+def get_me(current_user: User = Depends(get_current_user)):
     """Returns details of the currently authenticated user."""
-    token = authorization.replace("Bearer ", "")
-    payload = verify_token(token)
-    user_id = int(payload["sub"])
-
-    repo = UserRepository(db)
-    user = repo.get_user_by_id(user_id)
-    if not user:
-        return BaseResponse(success=False, error="User not found")
-    return BaseResponse(data=UserDetailResponse.model_validate(user))
+    return BaseResponse(data=UserDetailResponse.model_validate(current_user))

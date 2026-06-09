@@ -5,7 +5,8 @@ import 'package:agroledger/core/router/smooth_page_route.dart';
 import 'login_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {
-  const OnboardingScreen({super.key});
+  final VoidCallback onFinish;
+  const OnboardingScreen({super.key, required this.onFinish});
 
   @override
   State<OnboardingScreen> createState() => _OnboardingScreenState();
@@ -107,11 +108,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     child: _currentPage == _pages.length - 1
                         ? ElevatedButton(
                             key: const ValueKey('start_btn'),
-                            onPressed: () {
-                              Navigator.of(context).pushReplacement(
-                                SmoothPageRoute(page: const LoginScreen()),
-                              );
-                            },
+                            onPressed: widget.onFinish,
                             child: const Text('Начать работу'),
                           )
                         : TextButton(
