@@ -20,5 +20,11 @@ class Settings(BaseSettings):
     # Database
     DATABASE_URL: str = Field(..., alias="DATABASE_URL")
 
+    @property
+    def sqlalchemy_database_url(self) -> str:
+        if self.DATABASE_URL.startswith("postgres://"):
+            return self.DATABASE_URL.replace("postgres://", "postgresql://", 1)
+        return self.DATABASE_URL
+
 
 settings = Settings()

@@ -4,7 +4,7 @@ from app.core.config import settings
 
 # Create engine
 engine = create_engine(
-    settings.DATABASE_URL,
+    settings.sqlalchemy_database_url,
     # pool_pre_ping helps to detect stale connections
     pool_pre_ping=True
 )

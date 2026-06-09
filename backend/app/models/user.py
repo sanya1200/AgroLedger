@@ -17,7 +17,7 @@ class User(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
     phone = Column(String, unique=True, index=True, nullable=True)
-    role = Column(Enum(UserRole), default=UserRole.BUYER, nullable=False)
+    role = Column(Enum(UserRole, native_enum=False), default=UserRole.BUYER, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     # Relationships

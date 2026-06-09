@@ -1,4 +1,5 @@
 import logging
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -17,9 +18,6 @@ import app.models.business_profile
 import app.models.calculator
 import app.models.marketplace
 
-# Создаем таблицы в БД
-Base.metadata.create_all(bind=engine)
-
 # Настройка логирования
 logging.basicConfig(
     level=logging.INFO,
@@ -27,9 +25,21 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Создаем таблицы в БД при старте
+    logger.info("Creating database tables...")
+    try:
+        Base.metadata.create_all(bind=engine)
+        logger.info("Database tables created successfully.")
+    except Exception as e:
+        logger.error(f"Error creating database tables: {e}")
+    yield
+
 app = FastAPI(
     title=settings.PROJECT_NAME,
-    openapi_url=f"{settings.API_V1_STR}/openapi.json"
+    openapi_url=f"{settings.API_V1_STR}/openapi.json",
+    lifespan=lifespan
 )
 
 app.add_middleware(
@@ -49,9 +59,13 @@ app.include_router(marketplace_mod.router, prefix=f"{settings.API_V1_STR}/market
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     logger.error(f"Unhandled exception: {exc}", exc_info=True)
+    # Возвращаем детали ошибки для отладки (в продакшене лучше скрыть)
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content={"detail": "Internal server error", "error_type": type(exc).__name__},
+        content={
+            "detail": str(exc),
+            "error_type": type(exc).__name__
+        },
     )
 
 @app.get("/api/v1/healthcheck")
