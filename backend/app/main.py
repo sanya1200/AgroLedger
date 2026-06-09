@@ -5,10 +5,17 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.exceptions import RequestValidationError
+from sqlalchemy import text
 
 from app.core.config import settings
-from sqlalchemy import text
 from app.core.database import engine, Base
+
+# Import all models to ensure Base.metadata knows about them
+from app.models.user import User, UserSession
+from app.models.business_profile import BusinessProfile
+from app.models.marketplace import Product
+from app.models.calculator import CalculationCycle, Expense, Income
+
 import app.routers.auth as auth_mod
 import app.routers.business as business_mod
 import app.routers.calculator as calculator_mod
@@ -23,32 +30,36 @@ logger = logging.getLogger(__name__)
 
 def run_migrations():
     """Manually apply schema changes to existing tables."""
-    with engine.connect() as conn:
-        logger.info("Running manual migrations...")
-        
-        # 1. Ensure 'users' table has all required columns
-        columns_to_add = {
-            "full_name": "VARCHAR(255)",
-            "hashed_pin": "VARCHAR(255)",
-            "is_biometric_enabled": "BOOLEAN DEFAULT FALSE",
-            "role": "VARCHAR(50) DEFAULT 'customer_buyer'",
-            "is_active": "BOOLEAN DEFAULT TRUE",
-            "is_verified": "BOOLEAN DEFAULT FALSE",
-            "created_at": "TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP"
-        }
-        
-        for column, col_type in columns_to_add.items():
-            try:
-                # PostgreSQL specific check
-                check_sql = text(f"SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='{column}'")
-                if not conn.execute(check_sql).fetchone():
-                    logger.info(f"Adding column {column} to users table...")
-                    conn.execute(text(f"ALTER TABLE users ADD COLUMN {column} {col_type}"))
-                    conn.commit()
-            except Exception as e:
-                logger.warning(f"Could not add column {column}: {e}")
-        
-        logger.info("Migrations completed.")
+    try:
+        with engine.connect() as conn:
+            logger.info("Running manual migrations...")
+            
+            # 1. Ensure 'users' table has all required columns
+            columns_to_add = {
+                "full_name": "VARCHAR(255)",
+                "hashed_pin": "VARCHAR(255)",
+                "is_biometric_enabled": "BOOLEAN DEFAULT FALSE",
+                "role": "VARCHAR(50) DEFAULT 'customer_buyer'",
+                "is_active": "BOOLEAN DEFAULT TRUE",
+                "is_verified": "BOOLEAN DEFAULT FALSE",
+                "created_at": "TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP"
+            }
+            
+            for column, col_type in columns_to_add.items():
+                try:
+                    # Check if column exists
+                    check_sql = text(f"SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='{column}'")
+                    result = conn.execute(check_sql).fetchone()
+                    if not result:
+                        logger.info(f"Adding column {column} to users table...")
+                        conn.execute(text(f"ALTER TABLE users ADD COLUMN {column} {col_type}"))
+                        conn.commit()
+                except Exception as e:
+                    logger.warning(f"Could not add column {column}: {e}")
+            
+            logger.info("Migrations completed.")
+    except Exception as e:
+        logger.error(f"Migration process failed: {e}")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -121,14 +132,29 @@ async def global_exception_handler(request: Request, exc: Exception):
         content={
             "success": False,
             "data": None,
-            "error": str(exc) if getattr(settings, "DEBUG", False) else "A critical error occurred on the server."
+            "error": f"Server Error: {str(exc)}" if getattr(settings, "DEBUG", True) else "A critical error occurred on the server."
         },
     )
 
 @app.get("/api/v1/healthcheck")
 async def health_check():
     """Service health status endpoint."""
-    return {"success": True, "data": {"status": "healthy", "version": "2.0.0"}, "error": None}
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        db_status = "connected"
+    except Exception as e:
+        db_status = f"error: {str(e)}"
+        
+    return {
+        "success": True, 
+        "data": {
+            "status": "healthy", 
+            "version": "2.0.0",
+            "database": db_status
+        }, 
+        "error": None
+    }
 
 @app.get("/")
 async def root():

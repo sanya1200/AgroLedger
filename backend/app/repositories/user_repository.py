@@ -19,10 +19,14 @@ class UserRepository:
 
     def create_user(self, user: User) -> User:
         """Persists a new user to the database."""
-        self.db.add(user)
-        self.db.commit()
-        self.db.refresh(user)
-        return user
+        try:
+            self.db.add(user)
+            self.db.commit()
+            self.db.refresh(user)
+            return user
+        except Exception:
+            self.db.rollback()
+            raise
 
     def update_user_pin(self, user_id: int, hashed_pin: str):
         """Updates the user's PIN hash."""

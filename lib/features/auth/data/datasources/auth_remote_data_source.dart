@@ -56,12 +56,19 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       final responseData = e.response?.data;
       final statusCode = e.response?.statusCode;
       String message = 'Ошибка сети ($statusCode)';
+
+      // Log full error for debugging
+      print('--- Login Debug Info ---');
+      print('Status Code: $statusCode');
+      print('Response Data: $responseData');
+      print('Error message: ${e.message}');
+      print('-------------------------');
+
       if (responseData is Map) {
         message = responseData['error'] ?? responseData['detail']?.toString() ?? 'Ошибка входа ($statusCode)';
       } else if (responseData is String && responseData.isNotEmpty) {
         message = responseData;
       }
-      print('Login Error: $message');
       throw Exception(message);
     }
   }
@@ -98,12 +105,19 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       final responseData = e.response?.data;
       final statusCode = e.response?.statusCode;
       String message = 'Ошибка сети ($statusCode)';
+      
+      // Log full error for debugging
+      print('--- Signup Debug Info ---');
+      print('Status Code: $statusCode');
+      print('Response Data: $responseData');
+      print('Error message: ${e.message}');
+      print('-------------------------');
+
       if (responseData is Map) {
         message = responseData['error'] ?? responseData['detail']?.toString() ?? 'Ошибка сервера ($statusCode)';
       } else if (responseData is String && responseData.isNotEmpty) {
         message = responseData;
       }
-      print('Signup Error: $message');
       throw Exception(message);
     }
   }
@@ -123,12 +137,19 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       final responseData = e.response?.data;
       final statusCode = e.response?.statusCode;
       String message = 'Ошибка авторизации ($statusCode)';
+
+      // Log full error for debugging
+      print('--- GetMe Debug Info ---');
+      print('Status Code: $statusCode');
+      print('Response Data: $responseData');
+      print('Error message: ${e.message}');
+      print('-------------------------');
+
       if (responseData is Map) {
         message = responseData['error'] ?? responseData['detail']?.toString() ?? 'Ошибка сессии ($statusCode)';
       } else if (responseData is String && responseData.isNotEmpty) {
         message = responseData;
       }
-      print('GetMe Error: $message');
       throw Exception(message);
     }
   }
