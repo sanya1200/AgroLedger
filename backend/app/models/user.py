@@ -9,6 +9,10 @@ class UserRole(str, enum.Enum):
     FARMER_BUSINESS = "farmer_business"
     CUSTOMER_BUYER = "customer_buyer"
 
+    # Compatibility aliases
+    BUSINESS = "farmer_business"
+    BUYER = "customer_buyer"
+
 class User(Base):
     __tablename__ = "users"
 
@@ -19,7 +23,7 @@ class User(Base):
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
     hashed_pin: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     is_biometric_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
-    role: Mapped[UserRole] = mapped_column(Enum(UserRole, native_enum=False), nullable=False)
+    role: Mapped[str] = mapped_column(String(50), default="customer_buyer", nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     is_verified: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

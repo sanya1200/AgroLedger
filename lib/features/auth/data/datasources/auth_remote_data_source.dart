@@ -54,12 +54,14 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       }
     } on DioException catch (e) {
       final responseData = e.response?.data;
-      String message = 'Ошибка сети';
+      final statusCode = e.response?.statusCode;
+      String message = 'Ошибка сети ($statusCode)';
       if (responseData is Map) {
-        message = responseData['error'] ?? responseData['detail']?.toString() ?? 'Ошибка сети';
-      } else if (responseData is String) {
+        message = responseData['error'] ?? responseData['detail']?.toString() ?? 'Ошибка входа ($statusCode)';
+      } else if (responseData is String && responseData.isNotEmpty) {
         message = responseData;
       }
+      print('Login Error: $message');
       throw Exception(message);
     }
   }
@@ -94,12 +96,14 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       }
     } on DioException catch (e) {
       final responseData = e.response?.data;
-      String message = 'Ошибка при регистрации';
+      final statusCode = e.response?.statusCode;
+      String message = 'Ошибка сети ($statusCode)';
       if (responseData is Map) {
-        message = responseData['error'] ?? responseData['detail']?.toString() ?? 'Ошибка при регистрации';
-      } else if (responseData is String) {
+        message = responseData['error'] ?? responseData['detail']?.toString() ?? 'Ошибка сервера ($statusCode)';
+      } else if (responseData is String && responseData.isNotEmpty) {
         message = responseData;
       }
+      print('Signup Error: $message');
       throw Exception(message);
     }
   }
@@ -117,12 +121,14 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       }
     } on DioException catch (e) {
       final responseData = e.response?.data;
-      String message = 'Ошибка авторизации';
+      final statusCode = e.response?.statusCode;
+      String message = 'Ошибка авторизации ($statusCode)';
       if (responseData is Map) {
-        message = responseData['error'] ?? responseData['detail']?.toString() ?? 'Ошибка авторизации';
-      } else if (responseData is String) {
+        message = responseData['error'] ?? responseData['detail']?.toString() ?? 'Ошибка сессии ($statusCode)';
+      } else if (responseData is String && responseData.isNotEmpty) {
         message = responseData;
       }
+      print('GetMe Error: $message');
       throw Exception(message);
     }
   }

@@ -11,6 +11,7 @@ class Settings(BaseSettings):
 
     PROJECT_NAME: str = "AgroLedger API"
     API_V1_STR: str = "/api/v1"
+    DEBUG: bool = True
 
     # Security
     SECRET_KEY: str

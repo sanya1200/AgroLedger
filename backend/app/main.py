@@ -1,10 +1,13 @@
 import logging
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request, status
+from fastapi import FastAPI, Request, status, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from fastapi.exceptions import RequestValidationError
 
 from app.core.config import settings
+from sqlalchemy import text
 from app.core.database import engine, Base
 import app.routers.auth as auth_mod
 import app.routers.business as business_mod
@@ -18,6 +21,35 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+def run_migrations():
+    """Manually apply schema changes to existing tables."""
+    with engine.connect() as conn:
+        logger.info("Running manual migrations...")
+        
+        # 1. Ensure 'users' table has all required columns
+        columns_to_add = {
+            "full_name": "VARCHAR(255)",
+            "hashed_pin": "VARCHAR(255)",
+            "is_biometric_enabled": "BOOLEAN DEFAULT FALSE",
+            "role": "VARCHAR(50) DEFAULT 'customer_buyer'",
+            "is_active": "BOOLEAN DEFAULT TRUE",
+            "is_verified": "BOOLEAN DEFAULT FALSE",
+            "created_at": "TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP"
+        }
+        
+        for column, col_type in columns_to_add.items():
+            try:
+                # PostgreSQL specific check
+                check_sql = text(f"SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='{column}'")
+                if not conn.execute(check_sql).fetchone():
+                    logger.info(f"Adding column {column} to users table...")
+                    conn.execute(text(f"ALTER TABLE users ADD COLUMN {column} {col_type}"))
+                    conn.commit()
+            except Exception as e:
+                logger.warning(f"Could not add column {column}: {e}")
+        
+        logger.info("Migrations completed.")
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """System lifecycle events initialization."""
@@ -25,6 +57,7 @@ async def lifespan(app: FastAPI):
     try:
         # Create database tables if they do not exist
         Base.metadata.create_all(bind=engine)
+        run_migrations()
         logger.info("Database initialized successfully.")
     except Exception as e:
         logger.error(f"Failed to initialize database: {e}")
@@ -53,6 +86,30 @@ app.include_router(business_mod.router, prefix=f"{settings.API_V1_STR}/business"
 app.include_router(calculator_mod.router, prefix=f"{settings.API_V1_STR}/calculator", tags=["Calculations"])
 app.include_router(marketplace_mod.router, prefix=f"{settings.API_V1_STR}/marketplace", tags=["Marketplace"])
 
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+    """Custom handler for HTTP exceptions to keep the envelope."""
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "success": False,
+            "data": None,
+            "error": str(exc.detail)
+        },
+    )
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """Custom handler for Pydantic validation errors."""
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content={
+            "success": False,
+            "data": None,
+            "error": f"Validation error: {exc.errors()}"
+        },
+    )
+
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     """Standardized error handler for all unhandled exceptions."""
@@ -64,7 +121,7 @@ async def global_exception_handler(request: Request, exc: Exception):
         content={
             "success": False,
             "data": None,
-            "error": str(exc) if settings.DEBUG else "A critical error occurred on the server."
+            "error": str(exc) if getattr(settings, "DEBUG", False) else "A critical error occurred on the server."
         },
     )
 

@@ -11,6 +11,10 @@ class AuthService:
 
     def register(self, data: SignUpRequest) -> User:
         """Registers a new user after verifying unique identity."""
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"Registering user: {data.email}, role: {data.role}")
+
         if self.repo.get_user_by_identity(data.email):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -22,14 +26,21 @@ class AuthService:
                 detail="User with this phone number already exists"
             )
 
-        new_user = User(
-            email=data.email,
-            phone=data.phone,
-            full_name=data.full_name,
-            hashed_password=get_password_hash(data.password),
-            role=UserRole(data.role)
-        )
-        return self.repo.create_user(new_user)
+        try:
+            new_user = User(
+                email=data.email,
+                phone=data.phone,
+                full_name=data.full_name,
+                hashed_password=get_password_hash(data.password),
+                role=str(data.role)
+            )
+            return self.repo.create_user(new_user)
+        except Exception as e:
+            logger.error(f"Error creating user in DB: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Database error: {str(e)}"
+            )
 
     def login(self, data: SignInRequest, meta: dict) -> TokenResponse:
         """Authenticates a user and creates a new session."""
