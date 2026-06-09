@@ -3,6 +3,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:agroledger/features/marketplace/presentation/bloc/marketplace_bloc.dart';
 import 'package:agroledger/features/marketplace/presentation/bloc/marketplace_event.dart';
 import 'package:agroledger/features/marketplace/presentation/bloc/marketplace_state.dart';
+import 'package:agroledger/core/theme/app_colors.dart';
+import 'package:agroledger/core/theme/app_text_styles.dart';
+import 'package:agroledger/features/auth/presentation/widgets/animated_input_field.dart';
+import 'package:agroledger/core/presentation/widgets/soft_card.dart';
 
 class AddProductScreen extends StatefulWidget {
   const AddProductScreen({super.key});
@@ -44,17 +48,18 @@ class _AddProductScreenState extends State<AddProductScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Разместить товар')),
+      backgroundColor: AppColors.creamBackground,
+      appBar: AppBar(title: const Text('Новое объявление')),
       body: BlocListener<MarketplaceBloc, MarketplaceState>(
         listener: (context, state) {
           if (state is ProductActionSuccess) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message), backgroundColor: Colors.green),
+              SnackBar(content: Text(state.message), backgroundColor: Colors.green, behavior: SnackBarBehavior.floating),
             );
             Navigator.pop(context);
           } else if (state is MarketplaceFailure) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message), backgroundColor: Colors.red),
+              SnackBar(content: Text(state.message), backgroundColor: AppColors.errorSoft, behavior: SnackBarBehavior.floating),
             );
           }
         },
@@ -65,86 +70,108 @@ class _AddProductScreenState extends State<AddProductScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                TextFormField(
-                  controller: _titleController,
-                  decoration: const InputDecoration(labelText: 'Название товара'),
-                  validator: (v) => v!.isEmpty ? 'Введите название' : null,
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _descriptionController,
-                  decoration: const InputDecoration(labelText: 'Описание'),
-                  maxLines: 3,
-                ),
-                const SizedBox(height: 16),
-                DropdownButtonFormField<String>(
-                  value: _selectedCategory,
-                  decoration: const InputDecoration(labelText: 'Категория'),
-                  items: _categories.map((c) => DropdownMenuItem(
-                    value: c['id'],
-                    child: Text(c['label']!),
-                  )).toList(),
-                  onChanged: (v) => setState(() => _selectedCategory = v!),
+                SoftCard(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    children: [
+                      AnimatedInputField(
+                        controller: _titleController,
+                        label: 'Название товара',
+                        prefixIcon: Icons.shopping_bag_outlined,
+                        validator: (v) => v!.isEmpty ? 'Введите название' : null,
+                      ),
+                      const SizedBox(height: 16),
+                      AnimatedInputField(
+                        controller: _descriptionController,
+                        label: 'Описание',
+                        prefixIcon: Icons.description_outlined,
+                        maxLines: 3,
+                      ),
+                      const SizedBox(height: 16),
+                      DropdownButtonFormField<String>(
+                        value: _selectedCategory,
+                        decoration: InputDecoration(
+                          labelText: 'Категория',
+                          prefixIcon: const Icon(Icons.category_outlined, color: AppColors.sagePrimary),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
+                          filled: true,
+                          fillColor: AppColors.creamBackground.withOpacity(0.5),
+                        ),
+                        items: _categories.map((c) => DropdownMenuItem(
+                          value: c['id'],
+                          child: Text(c['label']!),
+                        )).toList(),
+                        onChanged: (v) => setState(() => _selectedCategory = v!),
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 24),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextFormField(
-                        controller: _priceRetailController,
-                        decoration: const InputDecoration(labelText: 'Цена розница (₸)', suffixText: '₸'),
-                        keyboardType: TextInputType.number,
-                        validator: (v) => v!.isEmpty ? 'Обязательно' : null,
+                SoftCard(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: AnimatedInputField(
+                              controller: _priceRetailController,
+                              label: 'Цена розница',
+                              prefixIcon: Icons.payments_outlined,
+                              keyboardType: TextInputType.number,
+                              validator: (v) => v!.isEmpty ? 'Укажите' : null,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: AnimatedInputField(
+                              controller: _stockController,
+                              label: 'На складе',
+                              prefixIcon: Icons.inventory_2_outlined,
+                              keyboardType: TextInputType.number,
+                              validator: (v) => v!.isEmpty ? 'Укажите' : null,
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: TextFormField(
-                        controller: _stockController,
-                        decoration: const InputDecoration(labelText: 'На складе'),
-                        keyboardType: TextInputType.number,
-                        validator: (v) => v!.isEmpty ? 'Обязательно' : null,
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: AnimatedInputField(
+                              controller: _priceWholesaleController,
+                              label: 'Цена опт',
+                              prefixIcon: Icons.sell_outlined,
+                              keyboardType: TextInputType.number,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: AnimatedInputField(
+                              controller: _minQtyController,
+                              label: 'Мин. опт',
+                              prefixIcon: Icons.shopping_cart_checkout_outlined,
+                              keyboardType: TextInputType.number,
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextFormField(
-                        controller: _priceWholesaleController,
-                        decoration: const InputDecoration(labelText: 'Цена опт (₸)', suffixText: '₸'),
-                        keyboardType: TextInputType.number,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: TextFormField(
-                        controller: _minQtyController,
-                        decoration: const InputDecoration(labelText: 'Мин. кол-во для опта'),
-                        keyboardType: TextInputType.number,
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 40),
                 BlocBuilder<MarketplaceBloc, MarketplaceState>(
                   builder: (context, state) {
+                    final isLoading = state is MarketplaceLoading;
                     return ElevatedButton(
-                      onPressed: state is MarketplaceLoading ? null : _submit,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green[800],
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      child: state is MarketplaceLoading
+                      onPressed: isLoading ? null : _submit,
+                      child: isLoading
                           ? const CircularProgressIndicator(color: Colors.white)
-                          : const Text('Опубликовать объявление', style: TextStyle(fontSize: 16)),
+                          : const Text('Опубликовать товар'),
                     );
                   },
                 ),
+                const SizedBox(height: 40),
               ],
             ),
           ),
@@ -156,18 +183,18 @@ class _AddProductScreenState extends State<AddProductScreen> {
   void _submit() {
     if (_formKey.currentState!.validate()) {
       final productData = {
-        'title': _titleController.text,
-        'description': _descriptionController.text,
+        'title': _titleController.text.trim(),
+        'description': _descriptionController.text.trim(),
         'category': _selectedCategory,
-        'price_retail': double.parse(_priceRetailController.text),
-        'stock_quantity': double.parse(_stockController.text),
+        'price_retail': double.tryParse(_priceRetailController.text) ?? 0.0,
+        'stock_quantity': double.tryParse(_stockController.text) ?? 0.0,
       };
 
       if (_priceWholesaleController.text.isNotEmpty) {
-        productData['price_wholesale'] = double.parse(_priceWholesaleController.text);
+        productData['price_wholesale'] = double.tryParse(_priceWholesaleController.text) ?? 0.0;
       }
       if (_minQtyController.text.isNotEmpty) {
-        productData['wholesale_min_qty'] = double.parse(_minQtyController.text);
+        productData['wholesale_min_qty'] = double.tryParse(_minQtyController.text) ?? 0.0;
       }
 
       context.read<MarketplaceBloc>().add(CreateProductRequested(productData));

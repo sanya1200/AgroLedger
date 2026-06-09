@@ -57,3 +57,4 @@ class UserDetailResponse(BaseModel):
     is_biometric_enabled: bool
     is_verified: bool
     created_at: datetime
+    has_business_profile: bool = False

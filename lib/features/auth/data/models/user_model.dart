@@ -8,6 +8,7 @@ class UserModel extends Equatable {
   final String role;
   final bool isBiometricEnabled;
   final bool isVerified;
+  final bool hasBusinessProfile;
   final DateTime createdAt;
 
   const UserModel({
@@ -18,33 +19,24 @@ class UserModel extends Equatable {
     required this.role,
     required this.isBiometricEnabled,
     required this.isVerified,
+    required this.hasBusinessProfile,
     required this.createdAt,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
-    // Handling the "data" envelope from our new API
-    Map<String, dynamic> data;
-    if (json.containsKey('data')) {
-      if (json['data'] is Map<String, dynamic>) {
-        data = json['data'];
-      } else if (json['data'] is List && (json['data'] as List).isNotEmpty) {
-        data = (json['data'] as List).first;
-      } else {
-        data = json;
-      }
-    } else {
-      data = json;
-    }
-    
+    // We assume the caller has already extracted the 'data' part from BaseResponse
     return UserModel(
-      id: data['id'] ?? 0,
-      email: data['email'] ?? '',
-      phone: data['phone'] ?? '',
-      fullName: data['full_name'],
-      role: data['role'] ?? '',
-      isBiometricEnabled: data['is_biometric_enabled'] ?? false,
-      isVerified: data['is_verified'] ?? false,
-      createdAt: data['created_at'] != null ? DateTime.parse(data['created_at']) : DateTime.now(),
+      id: json['id'] ?? 0,
+      email: json['email'] ?? '',
+      phone: json['phone'] ?? '',
+      fullName: json['full_name'],
+      role: json['role'] ?? '',
+      isBiometricEnabled: json['is_biometric_enabled'] ?? false,
+      isVerified: json['is_verified'] ?? false,
+      hasBusinessProfile: json['has_business_profile'] ?? false,
+      createdAt: json['created_at'] != null 
+          ? DateTime.parse(json['created_at']) 
+          : DateTime.now(),
     );
   }
 
@@ -57,10 +49,11 @@ class UserModel extends Equatable {
       'role': role,
       'is_biometric_enabled': isBiometricEnabled,
       'is_verified': isVerified,
+      'has_business_profile': hasBusinessProfile,
       'created_at': createdAt.toIso8601String(),
     };
   }
 
   @override
-  List<Object?> get props => [id, email, phone, fullName, role, isBiometricEnabled, isVerified, createdAt];
+  List<Object?> get props => [id, email, phone, fullName, role, isBiometricEnabled, isVerified, hasBusinessProfile, createdAt];
 }

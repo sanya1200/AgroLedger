@@ -12,14 +12,22 @@ class MarketplaceRemoteDataSourceImpl implements MarketplaceRemoteDataSource {
 
   MarketplaceRemoteDataSourceImpl(this._client);
 
+  dynamic _unwrap(dynamic responseData) {
+    if (responseData is Map && responseData['success'] == true) {
+      return responseData['data'];
+    }
+    throw responseData?['error'] ?? 'Ошибка сервера';
+  }
+
   @override
   Future<List<ProductModel>> getProducts({String? category}) async {
     final response = await _client.dio.get(
       'marketplace/products',
       queryParameters: category != null ? {'category': category} : null,
     );
-    return (response.data as List)
-        .map((e) => ProductModel.fromJson(e as Map<String, dynamic>))
+    final data = _unwrap(response.data);
+    return (data as List)
+        .map((e) => ProductModel.fromJson(Map<String, dynamic>.from(e)))
         .toList();
   }
 
@@ -29,11 +37,13 @@ class MarketplaceRemoteDataSourceImpl implements MarketplaceRemoteDataSource {
       'marketplace/products',
       data: productData,
     );
-    return ProductModel.fromJson(response.data as Map<String, dynamic>);
+    final data = _unwrap(response.data);
+    return ProductModel.fromJson(Map<String, dynamic>.from(data));
   }
 
   @override
   Future<void> deleteProduct(int productId) async {
-    await _client.dio.delete('marketplace/products/$productId');
+    final response = await _client.dio.delete('marketplace/products/$productId');
+    _unwrap(response.data);
   }
 }

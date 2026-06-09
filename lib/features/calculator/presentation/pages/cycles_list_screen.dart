@@ -5,6 +5,9 @@ import 'package:agroledger/features/calculator/presentation/bloc/calculator_bloc
 import 'package:agroledger/features/calculator/presentation/bloc/calculator_event.dart';
 import 'package:agroledger/features/calculator/presentation/bloc/calculator_state.dart';
 import 'package:agroledger/features/calculator/presentation/pages/cycle_detail_screen.dart';
+import 'package:agroledger/core/theme/app_colors.dart';
+import 'package:agroledger/core/theme/app_text_styles.dart';
+import 'package:agroledger/core/presentation/widgets/soft_card.dart';
 
 class CyclesListScreen extends StatefulWidget {
   const CyclesListScreen({super.key});
@@ -27,13 +30,16 @@ class _CyclesListScreenState extends State<CyclesListScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Новый цикл'),
+        title: Text('Новый производственный цикл', style: AppTextStyles.h2),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
               controller: nameController,
-              decoration: const InputDecoration(labelText: 'Название (напр. Партия №5)'),
+              decoration: const InputDecoration(
+                labelText: 'Название (напр. Партия №5)',
+                border: OutlineInputBorder(),
+              ),
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
@@ -41,10 +47,13 @@ class _CyclesListScreenState extends State<CyclesListScreen> {
               items: const [
                 DropdownMenuItem(value: 'poultry', child: Text('Птица')),
                 DropdownMenuItem(value: 'cattle', child: Text('КРС')),
-                DropdownMenuItem(value: 'livestock', child: Text('Мелкий скот')),
+                DropdownMenuItem(value: 'livestock', child: Text('МРС (Овцы, Козы)')),
               ],
               onChanged: (val) => selectedType = val!,
-              decoration: const InputDecoration(labelText: 'Тип'),
+              decoration: const InputDecoration(
+                labelText: 'Тип животных',
+                border: OutlineInputBorder(),
+              ),
             ),
           ],
         ),
@@ -69,11 +78,16 @@ class _CyclesListScreenState extends State<CyclesListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Мои Хозяйства')),
-      floatingActionButton: FloatingActionButton(
+      backgroundColor: AppColors.creamBackground,
+      appBar: AppBar(
+        title: const Text('Учет хозяйства'),
+        centerTitle: true,
+      ),
+      floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showCreateCycleDialog(context),
-        backgroundColor: Colors.green[800],
-        child: const Icon(Icons.add, color: Colors.white),
+        backgroundColor: AppColors.sagePrimary,
+        icon: const Icon(Icons.add, color: Colors.white),
+        label: const Text('Новый цикл', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
       ),
       body: BlocBuilder<CalculatorBloc, CalculatorState>(
         builder: (context, state) {
@@ -81,30 +95,45 @@ class _CyclesListScreenState extends State<CyclesListScreen> {
             return const Center(child: CircularProgressIndicator());
           } else if (state is CyclesLoadSuccess) {
             if (state.cycles.isEmpty) {
-              return const Center(child: Text('У вас еще нет активных циклов'));
+              return _buildEmptyState();
             }
             return ListView.builder(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
               itemCount: state.cycles.length,
               itemBuilder: (context, index) {
                 final cycle = state.cycles[index];
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.all(16),
-                    leading: CircleAvatar(
-                      backgroundColor: Colors.green[100],
-                      child: Icon(Icons.analytics_outlined, color: Colors.green[800]),
-                    ),
-                    title: Text(cycle.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Text(
-                      'Тип: ${cycle.animalType} • С: ${DateFormat('dd.MM.yyyy').format(cycle.createdAt)}',
-                    ),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => CycleDetailScreen(cycle: cycle)),
+                final isActive = cycle.status == 'active';
+                
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: SoftCard(
+                    padding: const EdgeInsets.all(0),
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      leading: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: isActive ? AppColors.sagePrimary.withOpacity(0.1) : Colors.grey.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          isActive ? Icons.loop_rounded : Icons.check_circle_outline_rounded,
+                          color: isActive ? AppColors.sagePrimary : Colors.grey,
+                        ),
+                      ),
+                      title: Text(cycle.name, style: AppTextStyles.bodyMax.copyWith(fontWeight: FontWeight.bold)),
+                      subtitle: Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          '${_getAnimalTypeName(cycle.animalType)} • ${DateFormat('dd.MM.yyyy').format(cycle.createdAt)}',
+                          style: AppTextStyles.caption,
+                        ),
+                      ),
+                      trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textLight),
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => CycleDetailScreen(cycle: cycle)),
+                      ),
                     ),
                   ),
                 );
@@ -115,6 +144,37 @@ class _CyclesListScreenState extends State<CyclesListScreen> {
           }
           return const SizedBox();
         },
+      ),
+    );
+  }
+
+  String _getAnimalTypeName(String type) {
+    switch (type) {
+      case 'poultry': return 'Птица';
+      case 'cattle': return 'КРС';
+      case 'livestock': return 'МРС';
+      default: return 'Животные';
+    }
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.analytics_outlined, size: 80, color: AppColors.sagePrimary.withOpacity(0.2)),
+          const SizedBox(height: 24),
+          Text('Нет активных циклов', style: AppTextStyles.h2.copyWith(color: AppColors.textLight)),
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 40),
+            child: Text(
+              'Начните новый цикл производства, чтобы отслеживать расходы и доходы.',
+              textAlign: TextAlign.center,
+              style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textLight),
+            ),
+          ),
+        ],
       ),
     );
   }

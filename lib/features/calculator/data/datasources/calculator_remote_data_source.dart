@@ -18,10 +18,18 @@ class CalculatorRemoteDataSourceImpl implements CalculatorRemoteDataSource {
 
   CalculatorRemoteDataSourceImpl(this._client);
 
+  dynamic _unwrap(dynamic responseData) {
+    if (responseData is Map && responseData['success'] == true) {
+      return responseData['data'];
+    }
+    throw responseData?['error'] ?? 'Ошибка сервера';
+  }
+
   @override
   Future<List<CalculationCycleModel>> getCycles() async {
     final response = await _client.dio.get('calculator/cycles');
-    return (response.data as List).map((e) => CalculationCycleModel.fromJson(e)).toList();
+    final data = _unwrap(response.data);
+    return (data as List).map((e) => CalculationCycleModel.fromJson(e)).toList();
   }
 
   @override
@@ -30,7 +38,8 @@ class CalculatorRemoteDataSourceImpl implements CalculatorRemoteDataSource {
       'name': name,
       'animal_type': animalType,
     });
-    return CalculationCycleModel.fromJson(response.data);
+    final data = _unwrap(response.data);
+    return CalculationCycleModel.fromJson(data);
   }
 
   @override
@@ -40,7 +49,8 @@ class CalculatorRemoteDataSourceImpl implements CalculatorRemoteDataSource {
       'amount': amount,
       'description': description,
     });
-    return ExpenseModel.fromJson(response.data);
+    final data = _unwrap(response.data);
+    return ExpenseModel.fromJson(data);
   }
 
   @override
@@ -50,18 +60,21 @@ class CalculatorRemoteDataSourceImpl implements CalculatorRemoteDataSource {
       'quantity': quantity,
       'amount': amount,
     });
-    return IncomeModel.fromJson(response.data);
+    final data = _unwrap(response.data);
+    return IncomeModel.fromJson(data);
   }
 
   @override
   Future<CycleAnalyticsModel> getAnalytics(int cycleId) async {
     final response = await _client.dio.get('calculator/cycles/$cycleId/analytics');
-    return CycleAnalyticsModel.fromJson(response.data);
+    final data = _unwrap(response.data);
+    return CycleAnalyticsModel.fromJson(data);
   }
 
   @override
   Future<CalculationCycleModel> closeCycle(int cycleId) async {
     final response = await _client.dio.put('calculator/cycles/$cycleId/close');
-    return CalculationCycleModel.fromJson(response.data);
+    final data = _unwrap(response.data);
+    return CalculationCycleModel.fromJson(data);
   }
 }

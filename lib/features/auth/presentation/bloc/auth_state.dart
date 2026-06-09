@@ -1,42 +1,30 @@
 part of 'auth_bloc.dart';
 
-abstract class AuthState extends Equatable {
-  const AuthState();
+enum AuthStatus { initial, loading, authenticated, authorized, unauthenticated, failure }
+
+class AuthState extends Equatable {
+  final AuthStatus status;
+  final UserModel? user;
+  final String? errorMessage;
+
+  const AuthState({
+    this.status = AuthStatus.initial,
+    this.user,
+    this.errorMessage,
+  });
 
   @override
-  List<Object?> get props => [];
-}
+  List<Object?> get props => [status, user, errorMessage];
 
-class AuthInitial extends AuthState {}
-
-class AuthLoading extends AuthState {}
-
-class AuthAuthenticated extends AuthState {
-  final UserModel user;
-
-  const AuthAuthenticated(this.user);
-
-  @override
-  List<Object?> get props => [user];
-}
-
-/// New state: User is fully authorized (passed PIN/Biometric)
-class AuthAuthorized extends AuthState {
-  final UserModel user;
-
-  const AuthAuthorized(this.user);
-
-  @override
-  List<Object?> get props => [user];
-}
-
-class AuthUnauthenticated extends AuthState {}
-
-class AuthFailureState extends AuthState {
-  final String message;
-
-  const AuthFailureState(this.message);
-
-  @override
-  List<Object?> get props => [message];
+  AuthState copyWith({
+    AuthStatus? status,
+    UserModel? user,
+    String? errorMessage,
+  }) {
+    return AuthState(
+      status: status ?? this.status,
+      user: user ?? this.user,
+      errorMessage: errorMessage ?? this.errorMessage,
+    );
+  }
 }

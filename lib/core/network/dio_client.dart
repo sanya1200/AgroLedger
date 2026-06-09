@@ -27,9 +27,38 @@ class DioClient {
           onError: (DioException e, handler) async {
             // Handle 401 Unauthorized
             if (e.response?.statusCode == 401) {
-              await _storage.delete(key: 'access_token');
-              // Here we would typically navigate to login screen
-              // For now, we just clear the token as requested
+              final refreshToken = await _storage.read(key: 'refresh_token');
+              if (refreshToken != null) {
+                try {
+                  // Attempt to refresh token
+                  final response = await Dio().post(
+                    '${_dio.options.baseUrl}auth/refresh',
+                    queryParameters: {'refresh_token': refreshToken},
+                    headers: {
+                      'X-Device-Fingerprint': 'agro_device_id_default',
+                      'X-Device-Name': 'Mobile App',
+                    },
+                  );
+                  
+                  if (response.data['success'] == true) {
+                    final newData = response.data['data'];
+                    await _storage.write(key: 'access_token', value: newData['access_token']);
+                    await _storage.write(key: 'refresh_token', value: newData['refresh_token']);
+                    
+                    // Retry original request
+                    final options = e.requestOptions;
+                    options.headers['Authorization'] = 'Bearer ${newData['access_token']}';
+                    final retryResponse = await _dio.fetch(options);
+                    return handler.resolve(retryResponse);
+                  }
+                } catch (refreshError) {
+                  // Refresh failed, clear everything
+                  await _storage.delete(key: 'access_token');
+                  await _storage.delete(key: 'refresh_token');
+                }
+              } else {
+                await _storage.delete(key: 'access_token');
+              }
             }
             return handler.next(e);
           },

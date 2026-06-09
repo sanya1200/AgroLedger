@@ -4,6 +4,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:agroledger/features/auth/data/datasources/auth_remote_data_source.dart';
 import 'package:agroledger/features/auth/data/models/user_model.dart';
 import 'package:crypt/crypt.dart';
+import 'dart:developer' as dev;
 
 part 'auth_event.dart';
 part 'auth_state.dart';
@@ -17,7 +18,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     required FlutterSecureStorage storage,
   })  : _authRemoteDataSource = authRemoteDataSource,
         _storage = storage,
-        super(AuthInitial()) {
+        super(const AuthState()) {
     on<AuthCheckStatusRequested>(_onCheckStatusRequested);
     on<AuthLoginRequested>(_onLoginRequested);
     on<AuthRegisterRequested>(_onRegisterRequested);
@@ -35,15 +36,14 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     if (token != null) {
       try {
         final user = await _authRemoteDataSource.getMe();
-        // If we want to support session persistence for PIN, we could check a 'is_pin_verified' flag here.
-        // For now, any fresh start requires PIN if it exists.
-        emit(AuthAuthenticated(user));
-      } catch (_) {
+        emit(state.copyWith(status: AuthStatus.authenticated, user: user));
+      } catch (e) {
+        dev.log('Auth check failed', error: e);
         await _storage.delete(key: 'access_token');
-        emit(AuthUnauthenticated());
+        emit(state.copyWith(status: AuthStatus.unauthenticated));
       }
     } else {
-      emit(AuthUnauthenticated());
+      emit(state.copyWith(status: AuthStatus.unauthenticated));
     }
   }
 
@@ -51,12 +51,12 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     AuthLoginRequested event,
     Emitter<AuthState> emit,
   ) async {
-    emit(AuthLoading());
+    emit(state.copyWith(status: AuthStatus.loading));
     try {
       final user = await _authRemoteDataSource.login(event.email, event.password);
-      emit(AuthAuthenticated(user));
+      emit(state.copyWith(status: AuthStatus.authenticated, user: user));
     } catch (e) {
-      emit(AuthFailureState(e.toString()));
+      emit(state.copyWith(status: AuthStatus.failure, errorMessage: e.toString()));
     }
   }
 
@@ -64,7 +64,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     AuthRegisterRequested event,
     Emitter<AuthState> emit,
   ) async {
-    emit(AuthLoading());
+    emit(state.copyWith(status: AuthStatus.loading));
     try {
       final user = await _authRemoteDataSource.register(
         email: event.email,
@@ -73,9 +73,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         role: event.role,
         fullName: event.fullName,
       );
-      emit(AuthAuthenticated(user));
+      emit(state.copyWith(status: AuthStatus.authenticated, user: user));
     } catch (e) {
-      emit(AuthFailureState(e.toString()));
+      emit(state.copyWith(status: AuthStatus.failure, errorMessage: e.toString()));
     }
   }
 
@@ -83,15 +83,13 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     AuthPinSetupRequested event,
     Emitter<AuthState> emit,
   ) async {
-    emit(AuthLoading());
+    emit(state.copyWith(status: AuthStatus.loading));
     try {
       final hashedPin = Crypt.sha256(event.pin).toString();
       await _storage.write(key: 'user_pin_hash', value: hashedPin);
-      
-      final user = await _authRemoteDataSource.getMe();
-      emit(AuthAuthorized(user)); // Directly authorized after setup
+      emit(state.copyWith(status: AuthStatus.authorized));
     } catch (e) {
-      emit(AuthFailureState("Ошибка при установке ПИН-кода"));
+      emit(state.copyWith(status: AuthStatus.failure, errorMessage: "Ошибка сохранения ПИН-кода"));
     }
   }
 
@@ -99,17 +97,16 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     AuthPinSignInRequested event,
     Emitter<AuthState> emit,
   ) async {
-    emit(AuthLoading());
-    final savedHash = await _storage.read(key: 'user_pin_hash');
-    if (savedHash != null && Crypt(savedHash).match(event.pin)) {
-      try {
-        final user = await _authRemoteDataSource.getMe();
-        emit(AuthAuthorized(user)); // Authorized after correct PIN
-      } catch (e) {
-        emit(AuthFailureState("Ошибка сессии. Пожалуйста, войдите снова."));
+    emit(state.copyWith(status: AuthStatus.loading));
+    try {
+      final savedHash = await _storage.read(key: 'user_pin_hash');
+      if (savedHash != null && Crypt(savedHash).match(event.pin)) {
+        emit(state.copyWith(status: AuthStatus.authorized));
+      } else {
+        emit(state.copyWith(status: AuthStatus.failure, errorMessage: "Неверный ПИН-код"));
       }
-    } else {
-      emit(AuthFailureState("Неверный ПИН-код"));
+    } catch (e) {
+      emit(state.copyWith(status: AuthStatus.failure, errorMessage: "Ошибка проверки ПИН-кода"));
     }
   }
 
@@ -117,17 +114,12 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     AuthBiometricSignInRequested event,
     Emitter<AuthState> emit,
   ) async {
-    emit(AuthLoading());
-    try {
-      final token = await _storage.read(key: 'access_token');
-      if (token != null) {
-        final user = await _authRemoteDataSource.getMe();
-        emit(AuthAuthorized(user)); // Authorized after biometric
-      } else {
-        emit(AuthFailureState("Сессия истекла. Войдите по паролю."));
-      }
-    } catch (e) {
-      emit(AuthFailureState("Ошибка входа по биометрии"));
+    emit(state.copyWith(status: AuthStatus.loading));
+    final token = await _storage.read(key: 'access_token');
+    if (token != null) {
+      emit(state.copyWith(status: AuthStatus.authorized));
+    } else {
+      emit(state.copyWith(status: AuthStatus.unauthenticated, errorMessage: "Сессия истекла"));
     }
   }
 
@@ -136,7 +128,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     Emitter<AuthState> emit,
   ) async {
     await _storage.delete(key: 'access_token');
+    await _storage.delete(key: 'refresh_token');
     await _storage.delete(key: 'user_pin_hash');
-    emit(AuthUnauthenticated());
+    emit(state.copyWith(status: AuthStatus.unauthenticated, user: null));
   }
 }

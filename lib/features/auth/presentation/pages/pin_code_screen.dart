@@ -19,7 +19,7 @@ class PinCodeScreen extends StatefulWidget {
 
 class _PinCodeScreenState extends State<PinCodeScreen> {
   String _currentPin = "";
-  String _firstPin = ""; // For setup mode confirmation
+  String _firstPin = ""; 
   bool _isConfirming = false;
   final _biometricService = sl<BiometricService>();
   bool _biometricsAvailable = false;
@@ -62,9 +62,7 @@ class _PinCodeScreenState extends State<PinCodeScreen> {
         if (_currentPin == _firstPin) {
           context.read<AuthBloc>().add(AuthPinSetupRequested(pin: _currentPin));
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('ПИН-коды не совпадают'), backgroundColor: AppColors.errorSoft),
-          );
+          _showError('ПИН-коды не совпадают');
           setState(() {
             _currentPin = "";
             _isConfirming = false;
@@ -75,6 +73,12 @@ class _PinCodeScreenState extends State<PinCodeScreen> {
     } else {
       context.read<AuthBloc>().add(AuthPinSignInRequested(pin: _currentPin));
     }
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: AppColors.errorSoft, behavior: SnackBarBehavior.floating),
+    );
   }
 
   Future<void> _handleBiometric() async {
@@ -96,11 +100,9 @@ class _PinCodeScreenState extends State<PinCodeScreen> {
       backgroundColor: AppColors.creamBackground,
       body: BlocListener<AuthBloc, AuthState>(
         listener: (context, state) {
-          if (state is AuthFailureState) {
+          if (state.status == AuthStatus.failure && state.errorMessage != null) {
             setState(() => _currentPin = "");
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message), backgroundColor: AppColors.errorSoft),
-            );
+            _showError(state.errorMessage!);
           }
         },
         child: SafeArea(
@@ -110,7 +112,6 @@ class _PinCodeScreenState extends State<PinCodeScreen> {
               Text(title, style: AppTextStyles.h2),
               const SizedBox(height: 48),
               
-              // PIN Indicators
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: List.generate(4, (index) => _PinIndicator(isActive: index < _currentPin.length)),
@@ -118,7 +119,6 @@ class _PinCodeScreenState extends State<PinCodeScreen> {
               
               const Spacer(),
               
-              // Number Pad
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 40),
                 child: Column(

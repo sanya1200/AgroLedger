@@ -9,6 +9,7 @@ class AnimatedInputField extends StatefulWidget {
   final bool isPassword;
   final String? Function(String?)? validator;
   final TextInputType keyboardType;
+  final int maxLines;
 
   const AnimatedInputField({
     super.key,
@@ -18,6 +19,7 @@ class AnimatedInputField extends StatefulWidget {
     this.isPassword = false,
     this.validator,
     this.keyboardType = TextInputType.text,
+    this.maxLines = 1,
   });
 
   @override
@@ -53,10 +55,11 @@ class _AnimatedInputFieldState extends State<AnimatedInputField> {
       child: TextFormField(
         controller: widget.controller,
         focusNode: _focusNode,
-        obscureText: _obscureText,
+        obscureText: widget.isPassword ? _obscureText : false,
         keyboardType: widget.keyboardType,
         style: AppTextStyles.bodyMax,
         validator: widget.validator,
+        maxLines: widget.isPassword ? 1 : widget.maxLines,
         decoration: InputDecoration(
           labelText: widget.label,
           prefixIcon: AnimatedOpacity(

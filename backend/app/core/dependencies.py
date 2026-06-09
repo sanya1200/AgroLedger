@@ -10,7 +10,7 @@ from app.schemas.token import TokenData
 
 # Указываем путь, по которому клиент будет получать токен
 oauth2_scheme = OAuth2PasswordBearer(
-    tokenUrl=f"{settings.API_V1_STR}/auth/login"
+    tokenUrl=f"{settings.API_V1_STR}/auth/signin"
 )
 
 

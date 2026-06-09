@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:agroledger/core/network/dio_client.dart';
 import 'package:agroledger/features/auth/data/models/user_model.dart';
+import 'dart:developer' as dev;
 
 abstract class AuthRemoteDataSource {
   Future<UserModel> login(String identity, String password);
@@ -21,11 +22,10 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
 
   AuthRemoteDataSourceImpl(this._client, this._storage);
 
-  // Helper to get device meta (for a real app, use device_info_plus)
   Map<String, String> _getDeviceHeaders() {
     return {
-      'X-Device-Fingerprint': 'emulator_fingerprint_v2', // Change for production
-      'X-Device-Name': 'Android Emulator',
+      'X-Device-Fingerprint': 'agro_device_id_default',
+      'X-Device-Name': 'Mobile App',
     };
   }
 
@@ -42,20 +42,19 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       );
 
       final data = response.data;
-      if (data is Map && (data['success'] == true)) {
+      if (data != null && data['success'] == true) {
         final tokenData = data['data'];
-        if (tokenData != null) {
-          await _storage.write(key: 'access_token', value: tokenData['access_token']);
-          await _storage.write(key: 'refresh_token', value: tokenData['refresh_token']);
-          return await getMe();
-        }
-        throw Exception('Server returned success but no token data');
+        await _storage.write(key: 'access_token', value: tokenData['access_token']);
+        await _storage.write(key: 'refresh_token', value: tokenData['refresh_token']);
+        
+        return await getMe();
       } else {
-        final error = (data is Map) ? (data['error'] ?? 'Ошибка входа') : 'Ошибка входа';
-        throw Exception(error);
+        throw data?['error'] ?? 'Ошибка входа';
       }
     } on DioException catch (e) {
-      throw _handleDioError(e, 'входа');
+      throw _handleDioError(e);
+    } catch (e) {
+      rethrow;
     }
   }
 
@@ -80,15 +79,16 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       );
 
       final data = response.data;
-      if (data is Map && (data['success'] == true)) {
-        // Automatically login after signup
+      if (data != null && data['success'] == true) {
+        // After successful signup, we log in to get tokens
         return await login(email, password);
       } else {
-        final error = (data is Map) ? (data['error'] ?? 'Ошибка регистрации') : 'Ошибка регистрации';
-        throw Exception(error);
+        throw data?['error'] ?? 'Ошибка регистрации';
       }
     } on DioException catch (e) {
-      throw _handleDioError(e, 'регистрации');
+      throw _handleDioError(e);
+    } catch (e) {
+      rethrow;
     }
   }
 
@@ -97,32 +97,28 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     try {
       final response = await _client.dio.get('auth/me');
       final data = response.data;
-      if (data is Map && (data['success'] == true)) {
-        return UserModel.fromJson(Map<String, dynamic>.from(data));
+      if (data != null && data['success'] == true) {
+        return UserModel.fromJson(Map<String, dynamic>.from(data['data']));
       } else {
-        final error = (data is Map) ? (data['error'] ?? 'Ошибка получения данных') : 'Ошибка получения данных';
-        throw Exception(error);
+        throw data?['error'] ?? 'Ошибка получения профиля';
       }
     } on DioException catch (e) {
-      throw _handleDioError(e, 'авторизации');
+      throw _handleDioError(e);
+    } catch (e) {
+      rethrow;
     }
   }
 
-  Exception _handleDioError(DioException e, String action) {
-    final responseData = e.response?.data;
-    final statusCode = e.response?.statusCode;
-    String message = 'Ошибка $action ($statusCode)';
-
-    print('--- Auth Debug Info ($action) ---');
-    print('Status Code: $statusCode');
-    print('Response Data: $responseData');
-    print('-------------------------');
-
-    if (responseData is Map) {
-      message = responseData['error'] ?? responseData['detail']?.toString() ?? 'Ошибка сервера ($statusCode)';
-    } else if (responseData is String && responseData.isNotEmpty) {
-      message = responseData;
+  String _handleDioError(DioException e) {
+    dev.log('DioError: ${e.type}', error: e, name: 'AuthRemoteDataSource');
+    if (e.response != null) {
+      final data = e.response?.data;
+      if (data is Map) {
+        return data['error'] ?? data['detail']?.toString() ?? 'Ошибка сервера';
+      }
+      return 'Ошибка сервера (${e.response?.statusCode})';
     }
-    return Exception(message);
+    if (e.type == DioExceptionType.connectionTimeout) return 'Превышено время ожидания';
+    return 'Проблемы с интернет-соединением';
   }
 }

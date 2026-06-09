@@ -7,6 +7,7 @@ import 'onboarding_screen.dart';
 import 'login_screen.dart';
 import 'pin_code_screen.dart';
 import 'package:agroledger/features/home/presentation/pages/main_screen.dart';
+import 'package:agroledger/features/home/presentation/pages/business_setup_screen.dart';
 import 'package:agroledger/core/di/service_locator.dart';
 
 class AuthFlowController extends StatefulWidget {
@@ -28,7 +29,6 @@ class _AuthFlowControllerState extends State<AuthFlowController> {
 
   Future<void> _checkInitialState() async {
     final prefs = await SharedPreferences.getInstance();
-    // Check if onboarding was already shown
     final isFirst = prefs.getBool('is_first_launch') ?? true;
     
     if (mounted) {
@@ -36,7 +36,6 @@ class _AuthFlowControllerState extends State<AuthFlowController> {
         _isFirstLaunch = isFirst;
         _isLoading = false;
       });
-      // Trigger token check in BLoC
       context.read<AuthBloc>().add(AuthCheckStatusRequested());
     }
   }
@@ -44,64 +43,54 @@ class _AuthFlowControllerState extends State<AuthFlowController> {
   Future<void> _finishOnboarding() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('is_first_launch', false);
-    if (mounted) {
-      setState(() {
-        _isFirstLaunch = false;
-      });
-    }
+    if (mounted) setState(() => _isFirstLaunch = false);
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
-    }
+    if (_isLoading) return _loadingIndicator();
 
     if (_isFirstLaunch == true) {
-      return OnboardingScreen(
-        onFinish: _finishOnboarding,
-      );
+      return OnboardingScreen(onFinish: _finishOnboarding);
     }
 
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, state) {
-        if (state is AuthAuthorized) {
+        if (state.status == AuthStatus.authorized) {
+          final user = state.user;
+          if (user != null && user.role == 'farmer_business' && !user.hasBusinessProfile) {
+            return const BusinessSetupScreen();
+          }
           return const MainScreen();
         }
+          
+          case AuthStatus.authenticated:
+            return FutureBuilder<String?>(
+              future: sl<FlutterSecureStorage>().read(key: 'user_pin_hash'),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) return _loadingIndicator();
+                if (snapshot.data == null) return const PinCodeScreen(mode: PinMode.setup);
+                return const PinCodeScreen(mode: PinMode.verify);
+              },
+            );
 
-        if (state is AuthAuthenticated) {
-          return FutureBuilder<String?>(
-            future: sl<FlutterSecureStorage>().read(key: 'user_pin_hash'),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Scaffold(body: Center(child: CircularProgressIndicator()));
-              }
-              
-              // If user is authenticated but has no PIN set yet
-              if (snapshot.data == null) {
-                return const PinCodeScreen(mode: PinMode.setup);
-              }
-              
-              // If user is authenticated and has PIN, verify it
-              return const PinCodeScreen(mode: PinMode.verify);
-            },
-          );
+          case AuthStatus.unauthenticated:
+          case AuthStatus.failure:
+            // Only show login if it's a real unauth or if we are not in loading/authenticated states
+            if (state.status == AuthStatus.failure && state.user != null) {
+              // If failure happened but we have a user, it's likely a PIN error, handled in PinScreen
+            }
+            return const LoginScreen();
+
+          case AuthStatus.loading:
+          case AuthStatus.initial:
+            return _loadingIndicator();
         }
-
-        if (state is AuthUnauthenticated || state is AuthFailureState) {
-          return const LoginScreen();
-        }
-
-        return const Scaffold(
-          body: Center(
-            child: CircularProgressIndicator(),
-          ),
-        );
       },
     );
+  }
+
+  Widget _loadingIndicator() {
+    return const Scaffold(body: Center(child: CircularProgressIndicator()));
   }
 }

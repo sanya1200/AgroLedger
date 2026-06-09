@@ -9,6 +9,7 @@ import 'package:agroledger/features/calculator/data/datasources/calculator_remot
 import 'package:agroledger/features/calculator/presentation/bloc/calculator_bloc.dart';
 import 'package:agroledger/features/marketplace/data/datasources/marketplace_remote_data_source.dart';
 import 'package:agroledger/features/marketplace/presentation/bloc/marketplace_bloc.dart';
+import 'package:agroledger/features/home/data/datasources/business_profile_remote_data_source.dart';
 
 final sl = GetIt.instance;
 
@@ -33,6 +34,9 @@ Future<void> initServiceLocator() async {
   );
   sl.registerLazySingleton<MarketplaceRemoteDataSource>(
     () => MarketplaceRemoteDataSourceImpl(sl<DioClient>()),
+  );
+  sl.registerLazySingleton<BusinessProfileRemoteDataSource>(
+    () => BusinessProfileRemoteDataSourceImpl(sl<DioClient>()),
   );
 
   // BLoCs

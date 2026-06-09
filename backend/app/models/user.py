@@ -32,6 +32,10 @@ class User(Base):
     sessions: Mapped[List["UserSession"]] = relationship("UserSession", back_populates="user", cascade="all, delete-orphan")
     business_profile = relationship("BusinessProfile", back_populates="user", uselist=False)
 
+    @property
+    def has_business_profile(self) -> bool:
+        return self.business_profile is not None
+
 class UserSession(Base):
     __tablename__ = "user_sessions"
 
