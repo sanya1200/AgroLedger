@@ -48,14 +48,20 @@ def run_migrations():
             for column, col_type in columns_to_add.items():
                 try:
                     # Check if column exists
-                    check_sql = text(f"SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='{column}'")
+                    check_sql = text(f"SELECT data_type FROM information_schema.columns WHERE table_name='users' AND column_name='{column}'")
                     result = conn.execute(check_sql).fetchone()
+                    
                     if not result:
                         logger.info(f"Adding column {column} to users table...")
                         conn.execute(text(f"ALTER TABLE users ADD COLUMN {column} {col_type}"))
                         conn.commit()
+                    elif column == "role" and result[0] == "USER-DEFINED":
+                        # If role is an ENUM (USER-DEFINED), convert it to VARCHAR to avoid 'invalid input value for enum'
+                        logger.info("Converting 'role' column from ENUM to VARCHAR for compatibility...")
+                        conn.execute(text("ALTER TABLE users ALTER COLUMN role TYPE VARCHAR(50) USING role::text"))
+                        conn.commit()
                 except Exception as e:
-                    logger.warning(f"Could not add column {column}: {e}")
+                    logger.warning(f"Could not migrate column {column}: {e}")
             
             logger.info("Migrations completed.")
     except Exception as e:
