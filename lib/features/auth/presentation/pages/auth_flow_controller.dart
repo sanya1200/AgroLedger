@@ -63,11 +63,11 @@ class _AuthFlowControllerState extends State<AuthFlowController> {
 
   void _showSessionExpiredSnackBar(BuildContext context) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
+      const SnackBar(
         content: Text(AuthBloc.sessionExpiredMessage),
         backgroundColor: AppColors.errorSoft,
         behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 4),
+        duration: Duration(seconds: 4),
       ),
     );
   }

@@ -26,10 +26,10 @@ class GlassContainer extends StatelessWidget {
         filter: ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma),
         child: Container(
           decoration: BoxDecoration(
-            color: color ?? AppColors.creamSurface.withOpacity(0.7),
+            color: color ?? AppColors.creamSurface.withValues(alpha: 0.7),
             borderRadius: BorderRadius.circular(borderRadius),
             border: Border.all(
-              color: borderColor ?? AppColors.creamSurface.withOpacity(0.3),
+              color: borderColor ?? AppColors.creamSurface.withValues(alpha: 0.3),
               width: 1.5,
             ),
           ),

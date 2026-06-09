@@ -178,10 +178,10 @@ class _PinIndicator extends StatelessWidget {
       width: 16,
       height: 16,
       decoration: BoxDecoration(
-        color: isActive ? AppColors.sagePrimary : AppColors.sageLight.withOpacity(0.2),
+        color: isActive ? AppColors.sagePrimary : AppColors.sageLight.withValues(alpha: 0.2),
         shape: BoxShape.circle,
         border: Border.all(
-          color: isActive ? AppColors.sagePrimary : AppColors.sageLight.withOpacity(0.3),
+          color: isActive ? AppColors.sagePrimary : AppColors.sageLight.withValues(alpha: 0.3),
           width: 1.5,
         ),
       ),
@@ -220,7 +220,7 @@ class _PinButton extends StatelessWidget {
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: AppColors.shadowColor.withOpacity(0.03),
+                color: AppColors.shadowColor.withValues(alpha: 0.03),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),

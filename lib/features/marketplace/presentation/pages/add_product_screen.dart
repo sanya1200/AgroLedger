@@ -4,7 +4,6 @@ import 'package:agroledger/features/marketplace/presentation/bloc/marketplace_bl
 import 'package:agroledger/features/marketplace/presentation/bloc/marketplace_event.dart';
 import 'package:agroledger/features/marketplace/presentation/bloc/marketplace_state.dart';
 import 'package:agroledger/core/theme/app_colors.dart';
-import 'package:agroledger/core/theme/app_text_styles.dart';
 import 'package:agroledger/features/auth/presentation/widgets/animated_input_field.dart';
 import 'package:agroledger/core/presentation/widgets/soft_card.dart';
 
@@ -89,13 +88,13 @@ class _AddProductScreenState extends State<AddProductScreen> {
                       ),
                       const SizedBox(height: 16),
                       DropdownButtonFormField<String>(
-                        value: _selectedCategory,
+                        initialValue: _selectedCategory,
                         decoration: InputDecoration(
                           labelText: 'Категория',
                           prefixIcon: const Icon(Icons.category_outlined, color: AppColors.sagePrimary),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
                           filled: true,
-                          fillColor: AppColors.creamBackground.withOpacity(0.5),
+                          fillColor: AppColors.creamBackground.withValues(alpha: 0.5),
                         ),
                         items: _categories.map((c) => DropdownMenuItem(
                           value: c['id'],

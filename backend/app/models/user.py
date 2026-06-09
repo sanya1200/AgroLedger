@@ -29,6 +29,9 @@ class User(Base):
 
     sessions: Mapped[List["UserSession"]] = relationship("UserSession", back_populates="user", cascade="all, delete-orphan")
     business_profile = relationship("BusinessProfile", back_populates="user", uselist=False)
+    livestock_assets: Mapped[List["LivestockAsset"]] = relationship(
+        "LivestockAsset", back_populates="user", cascade="all, delete-orphan"
+    )
 
     @property
     def has_business_profile(self) -> bool:

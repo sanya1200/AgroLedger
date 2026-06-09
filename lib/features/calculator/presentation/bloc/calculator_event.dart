@@ -1,41 +1,51 @@
 import 'package:equatable/equatable.dart';
+import 'package:agroledger/features/calculator/data/models/livestock_asset_model.dart';
+import 'package:agroledger/features/calculator/data/models/livestock_expense_model.dart';
+import 'package:agroledger/features/calculator/data/models/livestock_yield_model.dart';
 
 abstract class CalculatorEvent extends Equatable {
   const CalculatorEvent();
+
   @override
   List<Object?> get props => [];
 }
 
-class LoadCyclesRequested extends CalculatorEvent {}
+class FetchCalculatorSummaryEvent extends CalculatorEvent {
+  final int? assetId;
 
-class CreateCycleRequested extends CalculatorEvent {
-  final String name;
-  final String animalType;
-  const CreateCycleRequested(this.name, this.animalType);
+  const FetchCalculatorSummaryEvent({this.assetId});
+
+  @override
+  List<Object?> get props => [assetId];
 }
 
-class AddExpenseRequested extends CalculatorEvent {
-  final int cycleId;
-  final String category;
-  final double amount;
-  final String? description;
-  const AddExpenseRequested(this.cycleId, this.category, this.amount, this.description);
+class FetchAssetsEvent extends CalculatorEvent {
+  const FetchAssetsEvent();
 }
 
-class AddIncomeRequested extends CalculatorEvent {
-  final int cycleId;
-  final String productName;
-  final double quantity;
-  final double amount;
-  const AddIncomeRequested(this.cycleId, this.productName, this.quantity, this.amount);
+class CreateAssetEvent extends CalculatorEvent {
+  final LivestockAssetModel asset;
+
+  const CreateAssetEvent(this.asset);
+
+  @override
+  List<Object?> get props => [asset];
 }
 
-class LoadAnalyticsRequested extends CalculatorEvent {
-  final int cycleId;
-  const LoadAnalyticsRequested(this.cycleId);
+class RecordExpenseEvent extends CalculatorEvent {
+  final LivestockExpenseModel expense;
+
+  const RecordExpenseEvent(this.expense);
+
+  @override
+  List<Object?> get props => [expense];
 }
 
-class CloseCycleRequested extends CalculatorEvent {
-  final int cycleId;
-  const CloseCycleRequested(this.cycleId);
+class RecordYieldEvent extends CalculatorEvent {
+  final LivestockYieldModel yieldData;
+
+  const RecordYieldEvent(this.yieldData);
+
+  @override
+  List<Object?> get props => [yieldData];
 }

@@ -13,7 +13,7 @@ from app.core.database import engine, Base
 from app.models.user import User, UserSession
 from app.models.business_profile import BusinessProfile
 from app.models.marketplace import Product
-from app.models.calculator import CalculationCycle, Expense, Income
+from app.models.calculator import LivestockAsset, LivestockExpenses, LivestockYield
 
 import app.routers.auth as auth_mod
 import app.routers.business as business_mod

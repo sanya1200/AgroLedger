@@ -32,7 +32,7 @@ class ProfileScreen extends StatelessWidget {
                     children: [
                       CircleAvatar(
                         radius: 50,
-                        backgroundColor: AppColors.sagePrimary.withOpacity(0.1),
+                        backgroundColor: AppColors.sagePrimary.withValues(alpha: 0.1),
                         child: const Icon(Icons.person, size: 60, color: AppColors.sagePrimary),
                       ),
                       const SizedBox(height: 16),
@@ -41,7 +41,7 @@ class ProfileScreen extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                         decoration: BoxDecoration(
-                          color: AppColors.sagePrimary.withOpacity(0.1),
+                          color: AppColors.sagePrimary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
@@ -97,7 +97,7 @@ class ProfileScreen extends StatelessWidget {
                           onChanged: (val) {
                             // TODO: Implement toggle biometric
                           },
-                          activeColor: AppColors.sagePrimary,
+                          activeThumbColor: AppColors.sagePrimary,
                         ),
                       ),
                       const Divider(height: 1),

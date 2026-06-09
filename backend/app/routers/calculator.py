@@ -1,76 +1,85 @@
-from typing import List
-from fastapi import APIRouter, Depends, status
+from typing import List, Optional
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.dependencies import get_current_user
 from app.models.user import User
+from app.schemas.auth import BaseResponse
 from app.schemas.calculator import (
-    CalculationCycleCreate, CalculationCycleResponse,
-    ExpenseCreate, ExpenseResponse,
-    IncomeCreate, IncomeResponse,
-    CycleAnalyticsResponse
+    AssetCreate,
+    AssetResponse,
+    ExpenseCreate,
+    ExpenseResponse,
+    YieldCreate,
+    YieldResponse,
+    CalculatorSummaryResponse,
 )
 from app.services.calculator_service import CalculatorService
 
 router = APIRouter()
 
 
-@router.post("/cycles", response_model=CalculationCycleResponse, status_code=status.HTTP_201_CREATED)
-def create_cycle(
-    cycle_in: CalculationCycleCreate,
+@router.post(
+    "/assets",
+    response_model=BaseResponse[AssetResponse],
+    status_code=status.HTTP_201_CREATED,
+)
+def create_asset(
+    data: AssetCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
     service = CalculatorService(db)
-    return service.create_cycle(current_user, cycle_in)
+    asset = service.create_asset(current_user, data)
+    return BaseResponse(data=asset)
 
 
-@router.get("/cycles", response_model=List[CalculationCycleResponse])
-def get_cycles(
+@router.get("/assets", response_model=BaseResponse[List[AssetResponse]])
+def get_assets(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
     service = CalculatorService(db)
-    return service.get_user_cycles(current_user)
+    assets = service.get_user_assets(current_user)
+    return BaseResponse(data=assets)
 
 
-@router.post("/cycles/{cycle_id}/expenses", response_model=ExpenseResponse)
-def add_expense(
-    cycle_id: int,
-    expense_in: ExpenseCreate,
+@router.post(
+    "/expenses",
+    response_model=BaseResponse[ExpenseResponse],
+    status_code=status.HTTP_201_CREATED,
+)
+def create_expense(
+    data: ExpenseCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
     service = CalculatorService(db)
-    return service.add_expense(current_user, cycle_id, expense_in)
+    expense = service.create_expense(current_user, data)
+    return BaseResponse(data=expense)
 
 
-@router.post("/cycles/{cycle_id}/incomes", response_model=IncomeResponse)
-def add_income(
-    cycle_id: int,
-    income_in: IncomeCreate,
+@router.post(
+    "/yields",
+    response_model=BaseResponse[YieldResponse],
+    status_code=status.HTTP_201_CREATED,
+)
+def create_yield(
+    data: YieldCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
     service = CalculatorService(db)
-    return service.add_income(current_user, cycle_id, income_in)
+    record = service.create_yield(current_user, data)
+    return BaseResponse(data=record)
 
 
-@router.get("/cycles/{cycle_id}/analytics", response_model=CycleAnalyticsResponse)
-def get_cycle_analytics(
-    cycle_id: int,
+@router.get("/summary", response_model=BaseResponse[CalculatorSummaryResponse])
+def get_summary(
+    asset_id: Optional[int] = Query(None, gt=0, description="Filter analytics by a specific asset"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
     service = CalculatorService(db)
-    return service.get_analytics(current_user, cycle_id)
-
-
-@router.put("/cycles/{cycle_id}/close", response_model=CalculationCycleResponse)
-def close_cycle(
-    cycle_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    service = CalculatorService(db)
-    return service.close_cycle(current_user, cycle_id)
+    summary = service.get_analytics_summary(current_user.id, asset_id=asset_id)
+    return BaseResponse(data=summary)

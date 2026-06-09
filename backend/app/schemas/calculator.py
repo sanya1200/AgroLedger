@@ -1,73 +1,106 @@
 from datetime import datetime
-from typing import Optional
 from decimal import Decimal
-from pydantic import BaseModel, ConfigDict
-from app.models.calculator import AnimalType, CycleStatus, ExpenseCategory
+from typing import Optional, Dict
+from pydantic import BaseModel, ConfigDict, Field
+from app.models.calculator import LivestockCategory, ProductType
 
 
-class ExpenseBase(BaseModel):
-    category: ExpenseCategory
-    amount: Decimal
-    description: Optional[str] = None
+class AssetCreate(BaseModel):
+    category: LivestockCategory
+    breed: str = Field(..., min_length=1, max_length=255)
+    quantity: int = Field(..., gt=0)
+    purchase_price: Decimal = Field(..., ge=0)
 
 
-class ExpenseCreate(ExpenseBase):
-    pass
+class AssetUpdate(BaseModel):
+    category: Optional[LivestockCategory] = None
+    breed: Optional[str] = Field(None, min_length=1, max_length=255)
+    quantity: Optional[int] = Field(None, gt=0)
+    purchase_price: Optional[Decimal] = Field(None, ge=0)
 
 
-class ExpenseResponse(ExpenseBase):
+class AssetResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
-    cycle_id: int
-    date: datetime
-
-
-class IncomeBase(BaseModel):
-    product_name: str
-    quantity: float
-    amount: Decimal
-
-
-class IncomeCreate(IncomeBase):
-    pass
-
-
-class IncomeResponse(IncomeBase):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: int
-    cycle_id: int
-    date: datetime
-
-
-class CalculationCycleBase(BaseModel):
-    name: str
-    animal_type: AnimalType
-
-
-class CalculationCycleCreate(CalculationCycleBase):
-    pass
-
-
-class CalculationCycleUpdate(BaseModel):
-    name: Optional[str] = None
-    status: Optional[CycleStatus] = None
-
-
-class CalculationCycleResponse(CalculationCycleBase):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: int
-    business_id: int
-    status: CycleStatus
+    user_id: int
+    category: LivestockCategory
+    breed: str
+    quantity: int
+    purchase_price: Decimal
     created_at: datetime
-    closed_at: Optional[datetime] = None
 
 
-class CycleAnalyticsResponse(BaseModel):
-    total_expenses: Decimal
-    total_incomes: Decimal
+class ExpenseCreate(BaseModel):
+    asset_id: int = Field(..., gt=0)
+    feed_cost: Decimal = Field(default=Decimal("0"), ge=0)
+    vet_cost: Decimal = Field(default=Decimal("0"), ge=0)
+    utility_cost: Decimal = Field(default=Decimal("0"), ge=0)
+    other_cost: Decimal = Field(default=Decimal("0"), ge=0)
+    date: datetime
+
+
+class ExpenseUpdate(BaseModel):
+    feed_cost: Optional[Decimal] = Field(None, ge=0)
+    vet_cost: Optional[Decimal] = Field(None, ge=0)
+    utility_cost: Optional[Decimal] = Field(None, ge=0)
+    other_cost: Optional[Decimal] = Field(None, ge=0)
+    date: Optional[datetime] = None
+
+
+class ExpenseResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    asset_id: int
+    feed_cost: Decimal
+    vet_cost: Decimal
+    utility_cost: Decimal
+    other_cost: Decimal
+    date: datetime
+
+    @property
+    def total_cost(self) -> Decimal:
+        return self.feed_cost + self.vet_cost + self.utility_cost + self.other_cost
+
+
+class YieldCreate(BaseModel):
+    asset_id: int = Field(..., gt=0)
+    product_type: ProductType
+    volume: Decimal = Field(..., ge=0)
+    earnings: Decimal = Field(..., ge=0)
+    date: datetime
+
+
+class YieldUpdate(BaseModel):
+    product_type: Optional[ProductType] = None
+    volume: Optional[Decimal] = Field(None, ge=0)
+    earnings: Optional[Decimal] = Field(None, ge=0)
+    date: Optional[datetime] = None
+
+
+class YieldResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    asset_id: int
+    product_type: ProductType
+    volume: Decimal
+    earnings: Decimal
+    date: datetime
+
+
+class CalculatorSummaryResponse(BaseModel):
+    asset_id: Optional[int] = None
+    assets_count: int
+    initial_investment: Decimal
+    total_feed_cost: Decimal
+    total_vet_cost: Decimal
+    total_utility_cost: Decimal
+    total_other_cost: Decimal
+    operating_expenses: Decimal
+    total_costs: Decimal
+    total_earnings: Decimal
+    earnings_by_product: Dict[str, Decimal]
     net_profit: Decimal
-    ROI: float
-    status: CycleStatus
+    roi: float

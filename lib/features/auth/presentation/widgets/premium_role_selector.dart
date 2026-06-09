@@ -80,16 +80,16 @@ class _RoleItem extends StatelessWidget {
           duration: const Duration(milliseconds: 300),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: isSelected ? AppColors.sagePrimary.withOpacity(0.05) : AppColors.creamSurface,
+            color: isSelected ? AppColors.sagePrimary.withValues(alpha: 0.05) : AppColors.creamSurface,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: isSelected ? AppColors.sagePrimary : AppColors.sageLight.withOpacity(0.2),
+              color: isSelected ? AppColors.sagePrimary : AppColors.sageLight.withValues(alpha: 0.2),
               width: isSelected ? 2.0 : 1.0,
             ),
             boxShadow: [
               if (isSelected)
                 BoxShadow(
-                  color: AppColors.sagePrimary.withOpacity(0.1),
+                  color: AppColors.sagePrimary.withValues(alpha: 0.1),
                   blurRadius: 15,
                   offset: const Offset(0, 8),
                 ),
@@ -116,7 +116,7 @@ class _RoleItem extends StatelessWidget {
                 description,
                 textAlign: TextAlign.center,
                 style: AppTextStyles.caption.copyWith(
-                  color: isSelected ? AppColors.sagePrimary.withOpacity(0.7) : AppColors.textLight,
+                  color: isSelected ? AppColors.sagePrimary.withValues(alpha: 0.7) : AppColors.textLight,
                 ),
               ),
             ],

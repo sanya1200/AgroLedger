@@ -28,7 +28,7 @@ class AppTheme {
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(20),
           borderSide: BorderSide(
-            color: AppColors.sageLight.withOpacity(0.3),
+            color: AppColors.sageLight.withValues(alpha: 0.3),
             width: 1,
           ),
         ),
@@ -54,7 +54,7 @@ class AppTheme {
           ),
         ),
         labelStyle: AppTextStyles.bodyMedium.copyWith(color: AppColors.textLight),
-        hintStyle: AppTextStyles.bodyMedium.copyWith(color: AppColors.textLight.withOpacity(0.6)),
+        hintStyle: AppTextStyles.bodyMedium.copyWith(color: AppColors.textLight.withValues(alpha: 0.6)),
       ),
 
       // ElevatedButton Theme

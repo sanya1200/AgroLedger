@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:agroledger/features/auth/presentation/bloc/auth_bloc.dart';
-import 'package:agroledger/features/auth/data/models/user_model.dart';
 import 'package:agroledger/features/marketplace/presentation/pages/catalog_screen.dart';
-import 'package:agroledger/features/calculator/presentation/pages/cycles_list_screen.dart';
+import 'package:agroledger/features/calculator/presentation/pages/calculator_dashboard_screen.dart';
 import 'package:agroledger/features/home/presentation/pages/profile_screen.dart';
-import 'package:agroledger/core/theme/app_colors.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -27,7 +25,7 @@ class _MainScreenState extends State<MainScreen> {
         final bool isFarmer = user.role == 'farmer_business';
         
         final List<Widget> pages = isFarmer 
-          ? [const CyclesListScreen(), const CatalogScreen(), const ProfileScreen()]
+          ? [const CalculatorDashboardScreen(), const CatalogScreen(), const ProfileScreen()]
           : [const CatalogScreen(), const ProfileScreen()];
 
         if (_currentIndex >= pages.length) _currentIndex = 0;

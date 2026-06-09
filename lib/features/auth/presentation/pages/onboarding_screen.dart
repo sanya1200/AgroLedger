@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:agroledger/core/theme/app_colors.dart';
 import 'package:agroledger/core/theme/app_text_styles.dart';
-import 'package:agroledger/core/router/smooth_page_route.dart';
-import 'login_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {
   final VoidCallback onFinish;
@@ -62,7 +60,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           duration: const Duration(milliseconds: 500),
                           padding: const EdgeInsets.all(32),
                           decoration: BoxDecoration(
-                            color: AppColors.sagePrimary.withOpacity(0.1),
+                            color: AppColors.sagePrimary.withValues(alpha: 0.1),
                             shape: BoxShape.circle,
                           ),
                           child: Icon(
@@ -138,7 +136,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       height: 8,
       width: isActive ? 24 : 8,
       decoration: BoxDecoration(
-        color: isActive ? AppColors.sagePrimary : AppColors.sageLight.withOpacity(0.3),
+        color: isActive ? AppColors.sagePrimary : AppColors.sageLight.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(4),
       ),
     );

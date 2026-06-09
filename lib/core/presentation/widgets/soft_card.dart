@@ -24,7 +24,7 @@ class SoftCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(borderRadius),
         boxShadow: [
           BoxShadow(
-            color: AppColors.shadowColor.withOpacity(0.04),
+            color: AppColors.shadowColor.withValues(alpha: 0.04),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),

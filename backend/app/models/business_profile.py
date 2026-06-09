@@ -16,7 +16,5 @@ class BusinessProfile(Base):
     rating: Mapped[float] = mapped_column(Float, default=5.0)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
-    # Relationships
     user: Mapped["User"] = relationship("User", back_populates="business_profile")
-    calculation_cycles: Mapped[List["CalculationCycle"]] = relationship("CalculationCycle", back_populates="business")
     products: Mapped[List["Product"]] = relationship("Product", back_populates="business")
