@@ -4,6 +4,8 @@ import 'package:agroledger/core/di/service_locator.dart';
 import 'package:agroledger/core/theme/app_theme.dart';
 import 'package:agroledger/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:agroledger/features/auth/presentation/pages/auth_flow_controller.dart';
+import 'package:agroledger/features/calculator/presentation/bloc/calculator_bloc.dart';
+import 'package:agroledger/features/marketplace/presentation/bloc/marketplace_bloc.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -22,7 +24,13 @@ class AgroLedgerApp extends StatelessWidget {
     return MultiBlocProvider(
       providers: [
         BlocProvider<AuthBloc>(
-          create: (context) => sl<AuthBloc>(), // Event triggered in AuthFlowController
+          create: (context) => sl<AuthBloc>(),
+        ),
+        BlocProvider<CalculatorBloc>(
+          create: (context) => sl<CalculatorBloc>(),
+        ),
+        BlocProvider<MarketplaceBloc>(
+          create: (context) => sl<MarketplaceBloc>(),
         ),
       ],
       child: MaterialApp(

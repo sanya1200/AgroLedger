@@ -1,15 +1,28 @@
+import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:agroledger/core/services/auth_session_service.dart';
 
 class DioClient {
   final Dio _dio;
   final FlutterSecureStorage _storage;
+  final AuthSessionService _sessionService;
 
-  DioClient(this._dio, this._storage) {
+  bool _isRefreshing = false;
+  Completer<bool>? _refreshCompleter;
+
+  static const _deviceFingerprint = 'agro_device_id_default';
+  static const _deviceName = 'Mobile App';
+
+  DioClient(
+    this._dio,
+    this._storage,
+    this._sessionService,
+  ) {
     _dio
       ..options.baseUrl = 'https://agroledger-zlxo.onrender.com/api/v1/'
-      ..options.connectTimeout = const Duration(seconds: 15)
-      ..options.receiveTimeout = const Duration(seconds: 10)
+      ..options.connectTimeout = const Duration(seconds: 30)
+      ..options.receiveTimeout = const Duration(seconds: 30)
       ..options.headers = {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
@@ -17,7 +30,6 @@ class DioClient {
       ..interceptors.add(
         InterceptorsWrapper(
           onRequest: (options, handler) async {
-            // Add JWT token if exists
             final token = await _storage.read(key: 'access_token');
             if (token != null) {
               options.headers['Authorization'] = 'Bearer $token';
@@ -25,47 +37,108 @@ class DioClient {
             return handler.next(options);
           },
           onError: (DioException e, handler) async {
-            // Handle 401 Unauthorized
-            if (e.response?.statusCode == 401) {
-              final refreshToken = await _storage.read(key: 'refresh_token');
-              if (refreshToken != null) {
-                try {
-                  // Attempt to refresh token
-                  final response = await Dio().post(
-                    '${_dio.options.baseUrl}auth/refresh',
-                    queryParameters: {'refresh_token': refreshToken},
-                    options: Options(
-                      headers: {
-                        'X-Device-Fingerprint': 'agro_device_id_default',
-                        'X-Device-Name': 'Mobile App',
-                      },
-                    ),
-                  );
-                  
-                  if (response.data['success'] == true) {
-                    final newData = response.data['data'];
-                    await _storage.write(key: 'access_token', value: newData['access_token']);
-                    await _storage.write(key: 'refresh_token', value: newData['refresh_token']);
-                    
-                    // Retry original request
-                    final options = e.requestOptions;
-                    options.headers['Authorization'] = 'Bearer ${newData['access_token']}';
-                    final retryResponse = await _dio.fetch(options);
-                    return handler.resolve(retryResponse);
-                  }
-                } catch (refreshError) {
-                  // Refresh failed, clear everything
-                  await _storage.delete(key: 'access_token');
-                  await _storage.delete(key: 'refresh_token');
+            if (!_shouldAttemptRefresh(e)) {
+              return handler.next(e);
+            }
+
+            final refreshed = await _refreshTokens();
+            if (refreshed) {
+              try {
+                final newToken = await _storage.read(key: 'access_token');
+                final options = e.requestOptions;
+                options.headers['Authorization'] = 'Bearer $newToken';
+                final retryResponse = await _dio.fetch(options);
+                return handler.resolve(retryResponse);
+              } catch (retryError) {
+                if (retryError is DioException) {
+                  return handler.next(retryError);
                 }
-              } else {
-                await _storage.delete(key: 'access_token');
+                return handler.next(e);
               }
             }
+
+            await _clearAuthStorage();
+            _sessionService.notifySessionExpired();
             return handler.next(e);
           },
         ),
       );
+  }
+
+  bool _shouldAttemptRefresh(DioException e) {
+    if (e.response?.statusCode != 401) return false;
+
+    final path = e.requestOptions.path;
+    if (path.contains('auth/signin') ||
+        path.contains('auth/signup') ||
+        path.contains('auth/refresh')) {
+      return false;
+    }
+    return true;
+  }
+
+  Future<bool> _refreshTokens() async {
+    if (_isRefreshing) {
+      return _refreshCompleter!.future;
+    }
+
+    _isRefreshing = true;
+    _refreshCompleter = Completer<bool>();
+
+    try {
+      final refreshToken = await _storage.read(key: 'refresh_token');
+      if (refreshToken == null) {
+        _refreshCompleter!.complete(false);
+        return false;
+      }
+
+      final refreshDio = Dio(
+        BaseOptions(
+          baseUrl: _dio.options.baseUrl,
+          connectTimeout: _dio.options.connectTimeout,
+          receiveTimeout: _dio.options.receiveTimeout,
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'X-Device-Fingerprint': _deviceFingerprint,
+            'X-Device-Name': _deviceName,
+          },
+        ),
+      );
+
+      final response = await refreshDio.post(
+        'auth/refresh',
+        queryParameters: {'refresh_token': refreshToken},
+      );
+
+      if (response.data is Map && response.data['success'] == true) {
+        final tokenData = response.data['data'] as Map<String, dynamic>;
+        await _storage.write(
+          key: 'access_token',
+          value: tokenData['access_token'] as String,
+        );
+        await _storage.write(
+          key: 'refresh_token',
+          value: tokenData['refresh_token'] as String,
+        );
+        _refreshCompleter!.complete(true);
+        return true;
+      }
+
+      _refreshCompleter!.complete(false);
+      return false;
+    } catch (_) {
+      _refreshCompleter!.complete(false);
+      return false;
+    } finally {
+      _isRefreshing = false;
+      _refreshCompleter = null;
+    }
+  }
+
+  Future<void> _clearAuthStorage() async {
+    await _storage.delete(key: 'access_token');
+    await _storage.delete(key: 'refresh_token');
   }
 
   Dio get dio => _dio;

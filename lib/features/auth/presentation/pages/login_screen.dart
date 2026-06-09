@@ -97,7 +97,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           label: 'Пароль',
                           prefixIcon: Icons.lock_outline_rounded,
                           isPassword: true,
-                          validator: (v) => (v == null || v.length < 6) ? 'Минимум 6 символов' : null,
+                          validator: (v) => (v == null || v.length < 8) ? 'Минимум 8 символов' : null,
                         ),
                         const SizedBox(height: 32),
                         BlocBuilder<AuthBloc, AuthState>(

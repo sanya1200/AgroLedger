@@ -48,9 +48,10 @@ class CalculatorService:
 
     def close_cycle(self, user: User, cycle_id: int):
         cycle = self._verify_ownership(user, cycle_id)
+        from datetime import timezone
         update_data = {
             "status": CycleStatus.ARCHIVED,
-            "closed_at": datetime.utcnow()
+            "closed_at": datetime.now(timezone.utc)
         }
         return self.repository.update_cycle(cycle, update_data)
 

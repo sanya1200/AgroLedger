@@ -1,6 +1,6 @@
 import logging
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request, status, HTTPException
+from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -10,7 +10,6 @@ from sqlalchemy import text
 from app.core.config import settings
 from app.core.database import engine, Base
 
-# Import all models to ensure Base.metadata knows about them
 from app.models.user import User, UserSession
 from app.models.business_profile import BusinessProfile
 from app.models.marketplace import Product
@@ -21,20 +20,26 @@ import app.routers.business as business_mod
 import app.routers.calculator as calculator_mod
 import app.routers.marketplace as marketplace_mod
 
-# Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
 
+DEVICE_HEADERS = [
+    "Authorization",
+    "Content-Type",
+    "Accept",
+    "X-Device-Fingerprint",
+    "X-Device-Name",
+]
+
 def run_migrations():
     """Manually apply schema changes to existing tables."""
     try:
         with engine.connect() as conn:
             logger.info("Running manual migrations...")
-            
-            # 1. Ensure 'users' table has all required columns
+
             columns_to_add = {
                 "full_name": "VARCHAR(255)",
                 "hashed_pin": "VARCHAR(255)",
@@ -44,35 +49,60 @@ def run_migrations():
                 "is_verified": "BOOLEAN DEFAULT FALSE",
                 "created_at": "TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP"
             }
-            
+
             for column, col_type in columns_to_add.items():
                 try:
-                    # Check if column exists
-                    check_sql = text(f"SELECT data_type FROM information_schema.columns WHERE table_name='users' AND column_name='{column}'")
+                    check_sql = text(
+                        f"SELECT data_type FROM information_schema.columns "
+                        f"WHERE table_name='users' AND column_name='{column}'"
+                    )
                     result = conn.execute(check_sql).fetchone()
-                    
+
                     if not result:
                         logger.info(f"Adding column {column} to users table...")
                         conn.execute(text(f"ALTER TABLE users ADD COLUMN {column} {col_type}"))
                         conn.commit()
                     elif column == "role" and result[0] == "USER-DEFINED":
-                        # If role is an ENUM (USER-DEFINED), convert it to VARCHAR to avoid 'invalid input value for enum'
                         logger.info("Converting 'role' column from ENUM to VARCHAR for compatibility...")
-                        conn.execute(text("ALTER TABLE users ALTER COLUMN role TYPE VARCHAR(50) USING role::text"))
+                        conn.execute(text(
+                            "ALTER TABLE users ALTER COLUMN role TYPE VARCHAR(50) USING role::text"
+                        ))
                         conn.commit()
                 except Exception as e:
                     logger.warning(f"Could not migrate column {column}: {e}")
-            
+
+            session_columns = {
+                "refresh_jti": "VARCHAR(36)",
+                "revoked_at": "TIMESTAMP WITH TIME ZONE",
+                "grace_access_token": "TEXT",
+                "grace_refresh_token": "TEXT",
+                "grace_expires_at": "TIMESTAMP WITH TIME ZONE",
+            }
+
+            for column, col_type in session_columns.items():
+                try:
+                    check_sql = text(
+                        f"SELECT column_name FROM information_schema.columns "
+                        f"WHERE table_name='user_sessions' AND column_name='{column}'"
+                    )
+                    result = conn.execute(check_sql).fetchone()
+                    if not result:
+                        logger.info(f"Adding column {column} to user_sessions table...")
+                        conn.execute(text(
+                            f"ALTER TABLE user_sessions ADD COLUMN {column} {col_type}"
+                        ))
+                        conn.commit()
+                except Exception as e:
+                    logger.warning(f"Could not migrate user_sessions column {column}: {e}")
+
             logger.info("Migrations completed.")
     except Exception as e:
         logger.error(f"Migration process failed: {e}")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """System lifecycle events initialization."""
     logger.info("Initializing system components...")
     try:
-        # Create database tables if they do not exist
         Base.metadata.create_all(bind=engine)
         run_migrations()
         logger.info("Database initialized successfully.")
@@ -88,16 +118,18 @@ app = FastAPI(
     openapi_url=f"{settings.API_V1_STR}/openapi.json"
 )
 
-# Global CORS Configuration
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=DEVICE_HEADERS,
+    expose_headers=[
+        "X-Device-Fingerprint",
+        "X-Device-Name",
+    ],
 )
 
-# Application Routers
 app.include_router(auth_mod.router, prefix=f"{settings.API_V1_STR}/auth", tags=["Security & Auth Core"])
 app.include_router(business_mod.router, prefix=f"{settings.API_V1_STR}/business", tags=["Business Profile"])
 app.include_router(calculator_mod.router, prefix=f"{settings.API_V1_STR}/calculator", tags=["Calculations"])
@@ -105,7 +137,6 @@ app.include_router(marketplace_mod.router, prefix=f"{settings.API_V1_STR}/market
 
 @app.exception_handler(StarletteHTTPException)
 async def http_exception_handler(request: Request, exc: StarletteHTTPException):
-    """Custom handler for HTTP exceptions to keep the envelope."""
     return JSONResponse(
         status_code=exc.status_code,
         content={
@@ -117,7 +148,6 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException):
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
-    """Custom handler for Pydantic validation errors."""
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         content={
@@ -129,10 +159,8 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    """Standardized error handler for all unhandled exceptions."""
     logger.error(f"Critical System Error: {exc}", exc_info=True)
 
-    # Standardized JSON response envelope
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={
@@ -144,27 +172,25 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 @app.get("/api/v1/healthcheck")
 async def health_check():
-    """Service health status endpoint."""
     try:
         with engine.connect() as conn:
             conn.execute(text("SELECT 1"))
         db_status = "connected"
     except Exception as e:
         db_status = f"error: {str(e)}"
-        
+
     return {
-        "success": True, 
+        "success": True,
         "data": {
-            "status": "healthy", 
+            "status": "healthy",
             "version": "2.0.0",
             "database": db_status
-        }, 
+        },
         "error": None
     }
 
 @app.get("/")
 async def root():
-    """Root redirect / landing info."""
     return {
         "success": True,
         "data": {
@@ -176,5 +202,4 @@ async def root():
 
 if __name__ == "__main__":
     import uvicorn
-    # In production, uvicorn is usually run from the command line
     uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)

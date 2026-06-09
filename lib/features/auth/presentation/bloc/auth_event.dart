@@ -57,3 +57,5 @@ class AuthPinSignInRequested extends AuthEvent {
 class AuthBiometricSignInRequested extends AuthEvent {}
 
 class AuthLogoutRequested extends AuthEvent {}
+
+class AuthSessionExpired extends AuthEvent {}

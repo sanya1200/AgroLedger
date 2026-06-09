@@ -3,7 +3,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:agroledger/features/auth/data/datasources/auth_remote_data_source.dart';
 import 'package:agroledger/features/auth/data/models/user_model.dart';
-import 'package:crypt/crypt.dart';
+import 'package:agroledger/core/services/pin_crypto_service.dart';
 import 'dart:developer' as dev;
 
 part 'auth_event.dart';
@@ -12,6 +12,9 @@ part 'auth_state.dart';
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final AuthRemoteDataSource _authRemoteDataSource;
   final FlutterSecureStorage _storage;
+
+  static const sessionExpiredMessage =
+      'Сессия истекла, пожалуйста, войдите снова';
 
   AuthBloc({
     required AuthRemoteDataSource authRemoteDataSource,
@@ -26,24 +29,44 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<AuthPinSignInRequested>(_onPinSignInRequested);
     on<AuthBiometricSignInRequested>(_onBiometricSignInRequested);
     on<AuthLogoutRequested>(_onLogoutRequested);
+    on<AuthSessionExpired>(_onSessionExpired);
+  }
+
+  Future<void> _clearAllAuthData() async {
+    await _storage.delete(key: 'access_token');
+    await _storage.delete(key: 'refresh_token');
+    await _storage.delete(key: 'user_pin_hash');
   }
 
   Future<void> _onCheckStatusRequested(
     AuthCheckStatusRequested event,
     Emitter<AuthState> emit,
   ) async {
-    final token = await _storage.read(key: 'access_token');
-    if (token != null) {
-      try {
-        final user = await _authRemoteDataSource.getMe();
-        emit(state.copyWith(status: AuthStatus.authenticated, user: user));
-      } catch (e) {
-        dev.log('Auth check failed', error: e);
-        await _storage.delete(key: 'access_token');
-        emit(state.copyWith(status: AuthStatus.unauthenticated));
+    final accessToken = await _storage.read(key: 'access_token');
+    final refreshToken = await _storage.read(key: 'refresh_token');
+
+    if (accessToken == null && refreshToken == null) {
+      emit(state.copyWith(status: AuthStatus.unauthenticated, user: null));
+      return;
+    }
+
+    try {
+      final user = await _authRemoteDataSource.getMe();
+      emit(state.copyWith(status: AuthStatus.authenticated, user: user));
+    } catch (e) {
+      dev.log('Auth check failed', error: e);
+
+      final remainingRefresh = await _storage.read(key: 'refresh_token');
+      if (remainingRefresh == null) {
+        await _clearAllAuthData();
+        emit(state.copyWith(
+          status: AuthStatus.unauthenticated,
+          user: null,
+          errorMessage: sessionExpiredMessage,
+        ));
+      } else {
+        emit(state.copyWith(status: AuthStatus.unauthenticated, user: null));
       }
-    } else {
-      emit(state.copyWith(status: AuthStatus.unauthenticated));
     }
   }
 
@@ -51,12 +74,15 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     AuthLoginRequested event,
     Emitter<AuthState> emit,
   ) async {
-    emit(state.copyWith(status: AuthStatus.loading));
+    emit(state.copyWith(status: AuthStatus.loading, errorMessage: null));
     try {
       final user = await _authRemoteDataSource.login(event.email, event.password);
       emit(state.copyWith(status: AuthStatus.authenticated, user: user));
     } catch (e) {
-      emit(state.copyWith(status: AuthStatus.failure, errorMessage: e.toString()));
+      emit(state.copyWith(
+        status: AuthStatus.failure,
+        errorMessage: e.toString(),
+      ));
     }
   }
 
@@ -64,7 +90,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     AuthRegisterRequested event,
     Emitter<AuthState> emit,
   ) async {
-    emit(state.copyWith(status: AuthStatus.loading));
+    emit(state.copyWith(status: AuthStatus.loading, errorMessage: null));
     try {
       final user = await _authRemoteDataSource.register(
         email: event.email,
@@ -75,7 +101,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       );
       emit(state.copyWith(status: AuthStatus.authenticated, user: user));
     } catch (e) {
-      emit(state.copyWith(status: AuthStatus.failure, errorMessage: e.toString()));
+      emit(state.copyWith(
+        status: AuthStatus.failure,
+        errorMessage: e.toString(),
+      ));
     }
   }
 
@@ -83,13 +112,16 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     AuthPinSetupRequested event,
     Emitter<AuthState> emit,
   ) async {
-    emit(state.copyWith(status: AuthStatus.loading));
+    emit(state.copyWith(status: AuthStatus.loading, errorMessage: null));
     try {
-      final hashedPin = Crypt.sha256(event.pin).toString();
+      final hashedPin = await PinCryptoService.hashPin(event.pin);
       await _storage.write(key: 'user_pin_hash', value: hashedPin);
       emit(state.copyWith(status: AuthStatus.authorized));
     } catch (e) {
-      emit(state.copyWith(status: AuthStatus.failure, errorMessage: "Ошибка сохранения ПИН-кода"));
+      emit(state.copyWith(
+        status: AuthStatus.failure,
+        errorMessage: 'Ошибка сохранения ПИН-кода',
+      ));
     }
   }
 
@@ -97,16 +129,23 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     AuthPinSignInRequested event,
     Emitter<AuthState> emit,
   ) async {
-    emit(state.copyWith(status: AuthStatus.loading));
+    emit(state.copyWith(status: AuthStatus.loading, errorMessage: null));
     try {
       final savedHash = await _storage.read(key: 'user_pin_hash');
-      if (savedHash != null && Crypt(savedHash).match(event.pin)) {
+      if (savedHash != null &&
+          await PinCryptoService.verifyPin(event.pin, savedHash)) {
         emit(state.copyWith(status: AuthStatus.authorized));
       } else {
-        emit(state.copyWith(status: AuthStatus.failure, errorMessage: "Неверный ПИН-код"));
+        emit(state.copyWith(
+          status: AuthStatus.failure,
+          errorMessage: 'Неверный ПИН-код',
+        ));
       }
     } catch (e) {
-      emit(state.copyWith(status: AuthStatus.failure, errorMessage: "Ошибка проверки ПИН-кода"));
+      emit(state.copyWith(
+        status: AuthStatus.failure,
+        errorMessage: 'Ошибка проверки ПИН-кода',
+      ));
     }
   }
 
@@ -114,12 +153,15 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     AuthBiometricSignInRequested event,
     Emitter<AuthState> emit,
   ) async {
-    emit(state.copyWith(status: AuthStatus.loading));
+    emit(state.copyWith(status: AuthStatus.loading, errorMessage: null));
     final token = await _storage.read(key: 'access_token');
     if (token != null) {
       emit(state.copyWith(status: AuthStatus.authorized));
     } else {
-      emit(state.copyWith(status: AuthStatus.unauthenticated, errorMessage: "Сессия истекла"));
+      emit(state.copyWith(
+        status: AuthStatus.unauthenticated,
+        errorMessage: sessionExpiredMessage,
+      ));
     }
   }
 
@@ -127,9 +169,23 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     AuthLogoutRequested event,
     Emitter<AuthState> emit,
   ) async {
-    await _storage.delete(key: 'access_token');
-    await _storage.delete(key: 'refresh_token');
-    await _storage.delete(key: 'user_pin_hash');
-    emit(state.copyWith(status: AuthStatus.unauthenticated, user: null));
+    await _clearAllAuthData();
+    emit(state.copyWith(
+      status: AuthStatus.unauthenticated,
+      user: null,
+      errorMessage: null,
+    ));
+  }
+
+  Future<void> _onSessionExpired(
+    AuthSessionExpired event,
+    Emitter<AuthState> emit,
+  ) async {
+    await _clearAllAuthData();
+    emit(state.copyWith(
+      status: AuthStatus.unauthenticated,
+      user: null,
+      errorMessage: sessionExpiredMessage,
+    ));
   }
 }

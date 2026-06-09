@@ -1,18 +1,21 @@
+import logging
+from datetime import datetime, timezone, timedelta
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 from app.repositories.user_repository import UserRepository
 from app.core.security import get_password_hash, verify_password, create_token_pair, verify_token
-from app.models.user import User, UserSession, UserRole
+from app.models.user import User, UserSession
 from app.schemas.auth import SignUpRequest, SignInRequest, TokenResponse
+
+logger = logging.getLogger(__name__)
+
+REFRESH_GRACE_PERIOD_SECONDS = 10
 
 class AuthService:
     def __init__(self, db: Session):
         self.repo = UserRepository(db)
 
     def register(self, data: SignUpRequest) -> User:
-        """Registers a new user after verifying unique identity."""
-        import logging
-        logger = logging.getLogger(__name__)
         logger.info(f"Registering user: {data.email}, role: {data.role}")
 
         if self.repo.get_user_by_identity(data.email):
@@ -27,7 +30,6 @@ class AuthService:
             )
 
         try:
-            from datetime import datetime, timezone
             new_user = User(
                 email=data.email,
                 phone=data.phone,
@@ -45,7 +47,6 @@ class AuthService:
             )
 
     def login(self, data: SignInRequest, meta: dict) -> TokenResponse:
-        """Authenticates a user and creates a new session."""
         user = self.repo.get_user_by_identity(data.email_or_phone)
         if not user or not verify_password(data.password, user.hashed_password):
             raise HTTPException(
@@ -59,12 +60,13 @@ class AuthService:
                 detail="User account is deactivated"
             )
 
+        self.repo.revoke_all_user_sessions(user.id)
         tokens = create_token_pair(user.id)
 
-        # Storing session. In production, we might use SHA256 for refresh_token_hash for speed.
         session = UserSession(
             user_id=user.id,
             refresh_token_hash=get_password_hash(tokens["refresh_token"]),
+            refresh_jti=tokens["jti"],
             device_fingerprint=meta["fingerprint"],
             device_name=meta["device_name"],
             ip_address=meta["ip"],
@@ -79,32 +81,72 @@ class AuthService:
         )
 
     def refresh_tokens(self, refresh_token: str, meta: dict) -> TokenResponse:
-        """Rotates tokens by revoking the old session and creating a new one."""
         payload = verify_token(refresh_token, expected_type="refresh")
         user_id = int(payload["sub"])
+        jti = payload.get("jti")
 
-        # Verify if this specific refresh token session is still active
-        # This is a critical security check to prevent reused tokens.
-        # Note: In a real system, we would hash the incoming refresh_token and check it in the DB.
-        # Since we use bcrypt, we'd need to find the session for the user and then verify.
-        # For this high-level architecture, we'll assume the jti or hash verification is handled.
+        if not jti:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid refresh token"
+            )
 
-        # Create new pair
+        user = self.repo.get_user_by_id(user_id)
+        if not user or not user.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="User not found or deactivated"
+            )
+
+        self.repo.clear_expired_grace_tokens(user_id)
+
+        active_session = self.repo.find_active_session_by_refresh_token(user_id, refresh_token)
+        if active_session:
+            return self._rotate_session(active_session, user_id, meta)
+
+        grace_session = self.repo.find_grace_session_by_refresh_token(user_id, refresh_token, jti)
+        if grace_session:
+            logger.info(f"Grace-period refresh accepted for user {user_id}, jti={jti}")
+            return TokenResponse(
+                access_token=grace_session.grace_access_token,
+                refresh_token=grace_session.grace_refresh_token,
+                expires_in=900
+            )
+
+        revoked_session = self.repo.find_revoked_session_by_refresh_token(user_id, refresh_token)
+        if revoked_session:
+            logger.warning(f"Refresh token reuse detected for user {user_id}, jti={jti}")
+            self.repo.revoke_all_user_sessions(user_id)
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Refresh token reuse detected. Please sign in again."
+            )
+
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired refresh token"
+        )
+
+    def _rotate_session(self, old_session: UserSession, user_id: int, meta: dict) -> TokenResponse:
         tokens = create_token_pair(user_id)
 
-        # Revoke all previous sessions (or just the specific one) to enforce rotation
-        # Here we revoke all for simplicity and maximum security on refresh.
-        self.repo.revoke_all_user_sessions(user_id)
+        self.repo.apply_rotation_grace(
+            old_session,
+            access_token=tokens["access_token"],
+            refresh_token=tokens["refresh_token"],
+            grace_seconds=REFRESH_GRACE_PERIOD_SECONDS,
+        )
 
-        session = UserSession(
+        new_session = UserSession(
             user_id=user_id,
             refresh_token_hash=get_password_hash(tokens["refresh_token"]),
+            refresh_jti=tokens["jti"],
             device_fingerprint=meta.get("fingerprint", "unknown"),
             device_name=meta.get("device_name", "unknown"),
             ip_address=meta.get("ip", "0.0.0.0"),
             expires_at=tokens["refresh_expires_at"]
         )
-        self.repo.create_session(session)
+        self.repo.create_session(new_session)
 
         return TokenResponse(
             access_token=tokens["access_token"],
