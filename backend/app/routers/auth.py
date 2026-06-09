@@ -1,93 +1,80 @@
-from datetime import timedelta
-from typing import Any
-from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordRequestForm
+from fastapi import APIRouter, Depends, Header, Request, status
 from sqlalchemy.orm import Session
-
 from app.core.database import get_db
-from app.core.security import get_password_hash, verify_password, create_access_token
-from app.core.config import settings
-from app.models.user import User
-from app.schemas.user import UserCreate, UserResponse
-from app.schemas.token import Token
-
-from app.core.dependencies import get_current_user # Добавлен импорт
+from app.schemas.auth import BaseResponse, SignUpRequest, SignInRequest, TokenResponse, UserDetailResponse, PinSetupRequest
+from app.services.auth_service import AuthService
+from app.core.security import verify_token, get_password_hash
+from app.repositories.user_repository import UserRepository
 
 router = APIRouter()
 
+@router.post("/signup", response_model=BaseResponse[UserDetailResponse], status_code=status.HTTP_201_CREATED)
+def signup(data: SignUpRequest, db: Session = Depends(get_db)):
+    """Handles new user registration."""
+    service = AuthService(db)
+    user = service.register(data)
+    return BaseResponse(data=UserDetailResponse.model_validate(user))
 
-@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-def register(
-    user_in: UserCreate,
+@router.post("/signin", response_model=BaseResponse[TokenResponse])
+def signin(
+    data: SignInRequest,
+    request: Request,
+    x_device_fingerprint: str = Header(...),
+    x_device_name: str = Header(...),
     db: Session = Depends(get_db)
-) -> Any:
-    """
-    Регистрация нового пользователя.
-    Проверяет уникальность email и телефона.
-    """
-    # Проверка email
-    if db.query(User).filter(User.email == user_in.email).first():
-        raise HTTPException(
-            status_code=400,
-            detail="User with this email already exists."
-        )
-
-    # Проверка телефона
-    if user_in.phone and db.query(User).filter(User.phone == user_in.phone).first():
-        raise HTTPException(
-            status_code=400,
-            detail="User with this phone number already exists."
-        )
-
-    # Создание пользователя
-    db_user = User(
-        email=user_in.email,
-        phone=user_in.phone,
-        hashed_password=get_password_hash(user_in.password),
-        role=user_in.role
-    )
-    db.add(db_user)
-    db.commit()
-    db.refresh(db_user)
-
-    return db_user
-
-
-@router.post("/login", response_model=Token)
-def login(
-    db: Session = Depends(get_db),
-    form_data: OAuth2PasswordRequestForm = Depends()
-) -> Any:
-    """
-    Авторизация пользователя (OAuth2 compatible).
-    В поле username ожидается email.
-    """
-    user = db.query(User).filter(User.email == form_data.username).first()
-
-    if not user or not verify_password(form_data.password, user.hashed_password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
-        data={"sub": str(user.id)},
-        expires_delta=access_token_expires
-    )
-
-    return {
-        "access_token": access_token,
-        "token_type": "bearer"
+):
+    """Authenticates user and returns access/refresh token pair."""
+    service = AuthService(db)
+    meta = {
+        "fingerprint": x_device_fingerprint,
+        "device_name": x_device_name,
+        "ip": request.client.host if request.client else "0.0.0.0"
     }
+    tokens = service.login(data, meta)
+    return BaseResponse(data=tokens)
 
+@router.post("/refresh", response_model=BaseResponse[TokenResponse])
+def refresh(
+    refresh_token: str,
+    request: Request,
+    x_device_fingerprint: str = Header("unknown"),
+    x_device_name: str = Header("unknown"),
+    db: Session = Depends(get_db)
+):
+    """Refreshes the access token using a valid refresh token."""
+    service = AuthService(db)
+    meta = {
+        "fingerprint": x_device_fingerprint,
+        "device_name": x_device_name,
+        "ip": request.client.host if request.client else "0.0.0.0"
+    }
+    tokens = service.refresh_tokens(refresh_token, meta)
+    return BaseResponse(data=tokens)
 
-@router.get("/me", response_model=UserResponse)
-def get_me(
-    current_user: User = Depends(get_current_user)
-) -> Any:
-    """
-    Получение информации о текущем пользователе.
-    """
-    return current_user
+@router.post("/pin-setup", response_model=BaseResponse[str])
+def pin_setup(
+    data: PinSetupRequest,
+    authorization: str = Header(...),
+    db: Session = Depends(get_db)
+):
+    """Sets a 4-digit PIN code for quick biometric/PIN entry."""
+    token = authorization.replace("Bearer ", "")
+    payload = verify_token(token)
+    user_id = int(payload["sub"])
+
+    repo = UserRepository(db)
+    repo.update_user_pin(user_id, get_password_hash(data.pin_code))
+    return BaseResponse(data="PIN successfully set")
+
+@router.get("/me", response_model=BaseResponse[UserDetailResponse])
+def get_me(authorization: str = Header(...), db: Session = Depends(get_db)):
+    """Returns details of the currently authenticated user."""
+    token = authorization.replace("Bearer ", "")
+    payload = verify_token(token)
+    user_id = int(payload["sub"])
+
+    repo = UserRepository(db)
+    user = repo.get_user_by_id(user_id)
+    if not user:
+        return BaseResponse(success=False, error="User not found")
+    return BaseResponse(data=UserDetailResponse.model_validate(user))

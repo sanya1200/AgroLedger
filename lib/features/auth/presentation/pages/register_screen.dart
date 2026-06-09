@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:agroledger/features/auth/presentation/bloc/auth_bloc.dart';
+import '../bloc/auth_bloc.dart';
+import 'package:agroledger/features/auth/presentation/widgets/animated_input_field.dart';
+import 'package:agroledger/features/auth/presentation/widgets/premium_role_selector.dart';
+import 'package:agroledger/core/theme/app_colors.dart';
+import 'package:agroledger/core/theme/app_text_styles.dart';
+import 'package:agroledger/core/presentation/widgets/soft_card.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -11,49 +16,44 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
-  String _selectedRole = 'buyer';
+  String _selectedRole = 'customer_buyer';
 
   @override
   void dispose() {
+    _nameController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
-  String? _validateEmail(String? value) {
-    if (value == null || value.isEmpty) return 'Введите email';
-    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
-    if (!emailRegex.hasMatch(value)) return 'Введите корректный email';
-    return null;
-  }
-
-  String? _validatePhone(String? value) {
-    if (value == null || value.isEmpty) return 'Введите номер телефона';
-    final phoneRegex = RegExp(r'^\+?[1-9]\d{1,14}$');
-    if (!phoneRegex.hasMatch(value)) return 'Введите корректный формат телефона';
-    return null;
-  }
-
-  String? _validatePassword(String? value) {
-    if (value == null || value.isEmpty) return 'Введите пароль';
-    if (value.length < 8) return 'Пароль должен быть не менее 8 символов';
-    return null;
+  void _onRegister() {
+    if (_formKey.currentState!.validate()) {
+      context.read<AuthBloc>().add(
+            AuthRegisterRequested(
+              email: _emailController.text.trim(),
+              password: _passwordController.text.trim(),
+              phone: _phoneController.text.trim(),
+              role: _selectedRole,
+              // full_name would need to be added to the event if we want to store it
+            ),
+          );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Регистрация'),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        foregroundColor: Colors.green[900],
+        title: const Text('Создание аккаунта'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
       ),
       body: BlocConsumer<AuthBloc, AuthState>(
         listener: (context, state) {
@@ -64,7 +64,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(state.message),
-                backgroundColor: Colors.redAccent,
+                backgroundColor: AppColors.errorSoft,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
             );
           }
@@ -72,183 +74,83 @@ class _RegisterScreenState extends State<RegisterScreen> {
         builder: (context, state) {
           return SingleChildScrollView(
             padding: const EdgeInsets.all(24.0),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    'Создайте аккаунт',
-                    style: theme.textTheme.headlineSmall?.copyWith(
-                      color: Colors.green[900],
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text('Присоединяйтесь к экосистеме AgroLedger'),
-                  const SizedBox(height: 32),
-                  
-                  // Role Selector
-                  const Text(
-                    'Выберите вашу роль:',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _RoleCard(
-                          title: 'Покупатель',
-                          icon: Icons.shopping_basket_outlined,
-                          isSelected: _selectedRole == 'buyer',
-                          onTap: () => setState(() => _selectedRole = 'buyer'),
+            child: Column(
+              children: [
+                SoftCard(
+                  padding: const EdgeInsets.all(24),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text('Ваши данные', style: AppTextStyles.h2),
+                        const SizedBox(height: 24),
+                        AnimatedInputField(
+                          controller: _nameController,
+                          label: 'ФИО',
+                          prefixIcon: Icons.badge_outlined,
+                          validator: (v) => (v == null || v.isEmpty) ? 'Введите имя' : null,
                         ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: _RoleCard(
-                          title: 'Фермер',
-                          icon: Icons.agriculture_outlined,
-                          isSelected: _selectedRole == 'business',
-                          onTap: () => setState(() => _selectedRole = 'business'),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 32),
-
-                  TextFormField(
-                    controller: _emailController,
-                    decoration: InputDecoration(
-                      labelText: 'Email',
-                      prefixIcon: const Icon(Icons.email_outlined),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    keyboardType: TextInputType.emailAddress,
-                    validator: _validateEmail,
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _phoneController,
-                    decoration: InputDecoration(
-                      labelText: 'Телефон',
-                      prefixIcon: const Icon(Icons.phone_outlined),
-                      hintText: '+77001234567',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    keyboardType: TextInputType.phone,
-                    validator: _validatePhone,
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _passwordController,
-                    decoration: InputDecoration(
-                      labelText: 'Пароль',
-                      prefixIcon: const Icon(Icons.lock_outlined),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    obscureText: true,
-                    validator: _validatePassword,
-                  ),
-                  const SizedBox(height: 32),
-                  ElevatedButton(
-                    onPressed: state is AuthLoading
-                        ? null
-                        : () {
-                            if (_formKey.currentState!.validate()) {
-                              context.read<AuthBloc>().add(
-                                    AuthRegisterRequested(
-                                      email: _emailController.text,
-                                      password: _passwordController.text,
-                                      phone: _phoneController.text,
-                                      role: _selectedRole,
-                                    ),
-                                  );
+                        const SizedBox(height: 16),
+                        AnimatedInputField(
+                          controller: _emailController,
+                          label: 'Email',
+                          prefixIcon: Icons.email_outlined,
+                          keyboardType: TextInputType.emailAddress,
+                          validator: (v) {
+                            if (v == null || v.isEmpty) return 'Введите email';
+                            if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(v)) {
+                              return 'Некорректный email';
                             }
+                            return null;
                           },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green[800],
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                        ),
+                        const SizedBox(height: 16),
+                        AnimatedInputField(
+                          controller: _phoneController,
+                          label: 'Телефон',
+                          prefixIcon: Icons.phone_android_outlined,
+                          keyboardType: TextInputType.phone,
+                          validator: (v) => (v == null || v.isEmpty) ? 'Введите телефон' : null,
+                        ),
+                        const SizedBox(height: 16),
+                        AnimatedInputField(
+                          controller: _passwordController,
+                          label: 'Пароль',
+                          prefixIcon: Icons.lock_outline_rounded,
+                          isPassword: true,
+                          validator: (v) {
+                            if (v == null || v.length < 8) return 'Минимум 8 символов';
+                            if (!RegExp(r'[A-Z]').hasMatch(v)) return 'Нужна заглавная буква';
+                            if (!RegExp(r'\d').hasMatch(v)) return 'Нужна цифра';
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 24),
+                        PremiumRoleSelector(
+                          selectedRole: _selectedRole,
+                          onRoleSelected: (role) => setState(() => _selectedRole = role),
+                        ),
+                        const SizedBox(height: 32),
+                        ElevatedButton(
+                          onPressed: state is AuthLoading ? null : _onRegister,
+                          child: state is AuthLoading
+                              ? const SizedBox(
+                                  height: 24,
+                                  width: 24,
+                                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                                )
+                              : const Text('Создать аккаунт'),
+                        ),
+                      ],
                     ),
-                    child: state is AuthLoading
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Text(
-                            'Зарегистрироваться',
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                          ),
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 40),
+              ],
             ),
           );
         },
-      ),
-    );
-  }
-}
-
-class _RoleCard extends StatelessWidget {
-  final String title;
-  final IconData icon;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  const _RoleCard({
-    required this.title,
-    required this.icon,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: isSelected ? Colors.green[50] : Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isSelected ? Colors.green[800]! : Colors.grey[300]!,
-            width: 2,
-          ),
-        ),
-        child: Column(
-          children: [
-            Icon(
-              icon,
-              size: 32,
-              color: isSelected ? Colors.green[800] : Colors.grey,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              title,
-              style: TextStyle(
-                color: isSelected ? Colors.green[800] : Colors.grey,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

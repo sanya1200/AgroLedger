@@ -3,6 +3,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:agroledger/features/auth/data/datasources/auth_remote_data_source.dart';
 import 'package:agroledger/features/auth/data/models/user_model.dart';
+import 'package:crypt/crypt.dart';
 
 part 'auth_event.dart';
 part 'auth_state.dart';
@@ -17,10 +18,31 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   })  : _authRemoteDataSource = authRemoteDataSource,
         _storage = storage,
         super(AuthInitial()) {
+    on<AuthCheckStatusRequested>(_onCheckStatusRequested);
     on<AuthLoginRequested>(_onLoginRequested);
     on<AuthRegisterRequested>(_onRegisterRequested);
+    on<AuthPinSetupRequested>(_onPinSetupRequested);
+    on<AuthPinSignInRequested>(_onPinSignInRequested);
+    on<AuthBiometricSignInRequested>(_onBiometricSignInRequested);
     on<AuthLogoutRequested>(_onLogoutRequested);
-    on<AuthCheckStatusRequested>(_onCheckStatusRequested);
+  }
+
+  Future<void> _onCheckStatusRequested(
+    AuthCheckStatusRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    final token = await _storage.read(key: 'access_token');
+    if (token != null) {
+      try {
+        final user = await _authRemoteDataSource.getMe();
+        emit(AuthAuthenticated(user));
+      } catch (_) {
+        await _storage.delete(key: 'access_token');
+        emit(AuthUnauthenticated());
+      }
+    } else {
+      emit(AuthUnauthenticated());
+    }
   }
 
   Future<void> _onLoginRequested(
@@ -29,16 +51,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(AuthLoading());
     try {
-      // In a real implementation, login would return a token.
-      // For this example, we assume the data source handles the HTTP calls.
-      // We need to capture the token from the login response.
-      // However, the requested data source signature returns UserModel.
-      // Let's assume the Dio interceptor or data source handles the token storage if needed,
-      // but usually the BLoC or a Repository does it.
-      
-      // Since I don't have a Repository here as per the prompt's Step 4 (it only asked for DataSource),
-      // I'll put the logic here.
-      
       final user = await _authRemoteDataSource.login(event.email, event.password);
       emit(AuthAuthenticated(user));
     } catch (e) {
@@ -64,29 +76,65 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     }
   }
 
+  Future<void> _onPinSetupRequested(
+    AuthPinSetupRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(AuthLoading());
+    try {
+      final hashedPin = Crypt.sha256(event.pin).toString();
+      await _storage.write(key: 'user_pin_hash', value: hashedPin);
+      
+      // Notify state or proceed
+      final user = await _authRemoteDataSource.getMe();
+      emit(AuthAuthenticated(user));
+    } catch (e) {
+      emit(AuthFailureState("Ошибка при установке ПИН-кода"));
+    }
+  }
+
+  Future<void> _onPinSignInRequested(
+    AuthPinSignInRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(AuthLoading());
+    final savedHash = await _storage.read(key: 'user_pin_hash');
+    if (savedHash != null && Crypt(savedHash).match(event.pin)) {
+      try {
+        final user = await _authRemoteDataSource.getMe();
+        emit(AuthAuthenticated(user));
+      } catch (e) {
+        emit(AuthFailureState("Ошибка сессии. Пожалуйста, войдите снова."));
+      }
+    } else {
+      emit(AuthFailureState("Неверный ПИН-код"));
+    }
+  }
+
+  Future<void> _onBiometricSignInRequested(
+    AuthBiometricSignInRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(AuthLoading());
+    try {
+      final token = await _storage.read(key: 'access_token');
+      if (token != null) {
+        final user = await _authRemoteDataSource.getMe();
+        emit(AuthAuthenticated(user));
+      } else {
+        emit(AuthFailureState("Сессия истекла. Войдите по паролю."));
+      }
+    } catch (e) {
+      emit(AuthFailureState("Ошибка входа по биометрии"));
+    }
+  }
+
   Future<void> _onLogoutRequested(
     AuthLogoutRequested event,
     Emitter<AuthState> emit,
   ) async {
     await _storage.delete(key: 'access_token');
+    await _storage.delete(key: 'user_pin_hash');
     emit(AuthUnauthenticated());
-  }
-
-  Future<void> _onCheckStatusRequested(
-    AuthCheckStatusRequested event,
-    Emitter<AuthState> emit,
-  ) async {
-    final token = await _storage.read(key: 'access_token');
-    if (token != null) {
-      try {
-        final user = await _authRemoteDataSource.getMe();
-        emit(AuthAuthenticated(user)); 
-      } catch (_) {
-        await _storage.delete(key: 'access_token');
-        emit(AuthUnauthenticated());
-      }
-    } else {
-      emit(AuthUnauthenticated());
-    }
   }
 }
