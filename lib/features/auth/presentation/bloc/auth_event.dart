@@ -24,16 +24,18 @@ class AuthRegisterRequested extends AuthEvent {
   final String password;
   final String phone;
   final String role;
+  final String? fullName;
 
   const AuthRegisterRequested({
     required this.email,
     required this.password,
     required this.phone,
     required this.role,
+    this.fullName,
   });
 
   @override
-  List<Object?> get props => [email, password, phone, role];
+  List<Object?> get props => [email, password, phone, role, fullName];
 }
 
 class AuthPinSetupRequested extends AuthEvent {

@@ -39,7 +39,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               password: _passwordController.text.trim(),
               phone: _phoneController.text.trim(),
               role: _selectedRole,
-              // full_name would need to be added to the event if we want to store it
+              fullName: _nameController.text.trim(),
             ),
           );
     }

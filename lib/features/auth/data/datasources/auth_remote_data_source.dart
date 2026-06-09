@@ -4,12 +4,13 @@ import 'package:agroledger/core/network/dio_client.dart';
 import 'package:agroledger/features/auth/data/models/user_model.dart';
 
 abstract class AuthRemoteDataSource {
-  Future<UserModel> login(String email, String password);
+  Future<UserModel> login(String identity, String password);
   Future<UserModel> register({
     required String email,
     required String password,
-    String? phone,
+    required String phone,
     required String role,
+    String? fullName,
   });
   Future<UserModel> getMe();
 }
@@ -20,28 +21,45 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
 
   AuthRemoteDataSourceImpl(this._client, this._storage);
 
+  // Helper to get device meta (for a real app, use device_info_plus)
+  Map<String, String> _getDeviceHeaders() {
+    return {
+      'X-Device-Fingerprint': 'emulator_fingerprint_v2', // Change for production
+      'X-Device-Name': 'Android Emulator',
+    };
+  }
+
   @override
-  Future<UserModel> login(String email, String password) async {
+  Future<UserModel> login(String identity, String password) async {
     try {
       final response = await _client.dio.post(
-        'auth/login',
+        'auth/signin',
         data: {
-          'username': email,
+          'email_or_phone': identity,
           'password': password,
         },
-        options: Options(contentType: Headers.formUrlEncodedContentType),
+        options: Options(headers: _getDeviceHeaders()),
       );
 
-      if (response.statusCode == 200) {
-        final token = response.data['access_token'];
-        await _storage.write(key: 'access_token', value: token);
+      final bool success = (response.data is Map) ? (response.data['success'] ?? false) : false;
+      if (success) {
+        final tokenData = response.data['data'];
+        await _storage.write(key: 'access_token', value: tokenData['access_token']);
+        await _storage.write(key: 'refresh_token', value: tokenData['refresh_token']);
         
         return await getMe();
       } else {
-        throw Exception('Ошибка входа');
+        final error = (response.data is Map) ? (response.data['error'] ?? 'Ошибка входа') : 'Ошибка входа';
+        throw Exception(error);
       }
     } on DioException catch (e) {
-      final message = e.response?.data['detail'] ?? 'Ошибка сети';
+      final responseData = e.response?.data;
+      String message = 'Ошибка сети';
+      if (responseData is Map) {
+        message = responseData['error'] ?? responseData['detail']?.toString() ?? 'Ошибка сети';
+      } else if (responseData is String) {
+        message = responseData;
+      }
       throw Exception(message);
     }
   }
@@ -50,27 +68,38 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   Future<UserModel> register({
     required String email,
     required String password,
-    String? phone,
+    required String phone,
     required String role,
+    String? fullName,
   }) async {
     try {
       final response = await _client.dio.post(
-        'auth/register',
+        'auth/signup',
         data: {
           'email': email,
           'password': password,
           'phone': phone,
           'role': role,
+          'full_name': fullName ?? '',
         },
       );
 
-      if (response.statusCode == 201) {
+      final bool success = (response.data is Map) ? (response.data['success'] ?? false) : false;
+      if (success) {
+        // Automatically login after signup
         return await login(email, password);
       } else {
-        throw Exception('Ошибка регистрации');
+        final error = (response.data is Map) ? (response.data['error'] ?? 'Ошибка регистрации') : 'Ошибка регистрации';
+        throw Exception(error);
       }
     } on DioException catch (e) {
-      final message = e.response?.data['detail'] ?? 'Ошибка при регистрации';
+      final responseData = e.response?.data;
+      String message = 'Ошибка при регистрации';
+      if (responseData is Map) {
+        message = responseData['error'] ?? responseData['detail']?.toString() ?? 'Ошибка при регистрации';
+      } else if (responseData is String) {
+        message = responseData;
+      }
       throw Exception(message);
     }
   }
@@ -79,9 +108,22 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   Future<UserModel> getMe() async {
     try {
       final response = await _client.dio.get('auth/me');
-      return UserModel.fromJson(response.data);
+      final bool success = (response.data is Map) ? (response.data['success'] ?? false) : false;
+      if (success) {
+        return UserModel.fromJson(response.data);
+      } else {
+        final error = (response.data is Map) ? (response.data['error'] ?? 'Ошибка получения данных') : 'Ошибка получения данных';
+        throw Exception(error);
+      }
     } on DioException catch (e) {
-      throw Exception(e.response?.data['detail'] ?? 'Ошибка авторизации');
+      final responseData = e.response?.data;
+      String message = 'Ошибка авторизации';
+      if (responseData is Map) {
+        message = responseData['error'] ?? responseData['detail']?.toString() ?? 'Ошибка авторизации';
+      } else if (responseData is String) {
+        message = responseData;
+      }
+      throw Exception(message);
     }
   }
 }
