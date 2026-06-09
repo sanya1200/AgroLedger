@@ -21,7 +21,10 @@ Future<void> initServiceLocator() async {
 
   // Data Sources
   sl.registerLazySingleton<AuthRemoteDataSource>(
-    () => AuthRemoteDataSourceImpl(sl<DioClient>(), sl<FlutterSecureStorage>()),
+    () => AuthRemoteDataSourceImpl(
+      sl<DioClient>(),
+      sl<FlutterSecureStorage>(),
+    ),
   );
   sl.registerLazySingleton<CalculatorRemoteDataSource>(
     () => CalculatorRemoteDataSourceImpl(sl<DioClient>()),

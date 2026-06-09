@@ -36,7 +36,6 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         final token = response.data['access_token'];
         await _storage.write(key: 'access_token', value: token);
         
-        // After saving token, we can get user info
         return await getMe();
       } else {
         throw Exception('Ошибка входа');
@@ -66,7 +65,6 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       );
 
       if (response.statusCode == 201) {
-        // After registration, we automatically login to get the token
         return await login(email, password);
       } else {
         throw Exception('Ошибка регистрации');
