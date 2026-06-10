@@ -45,6 +45,8 @@ def run_migrations():
                 "hashed_pin": "VARCHAR(255)",
                 "is_biometric_enabled": "BOOLEAN DEFAULT FALSE",
                 "role": "VARCHAR(50) DEFAULT 'customer_buyer'",
+                "is_premium": "BOOLEAN DEFAULT FALSE",
+                "premium_until": "TIMESTAMP WITH TIME ZONE",
                 "is_active": "BOOLEAN DEFAULT TRUE",
                 "is_verified": "BOOLEAN DEFAULT FALSE",
                 "created_at": "TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP"
@@ -69,7 +71,58 @@ def run_migrations():
                         ))
                         conn.commit()
                 except Exception as e:
-                    logger.warning(f"Could not migrate column {column}: {e}")
+                    logger.warning(f"Could not migrate column {column} in users: {e}")
+
+            # Migrations for livestock_assets
+            asset_columns = {
+                "category": "VARCHAR(50)",
+                "quantity": "NUMERIC(14,2)",
+            }
+            for column, col_type in asset_columns.items():
+                try:
+                    conn.execute(text(f"ALTER TABLE livestock_assets ALTER COLUMN {column} TYPE {col_type}"))
+                    conn.commit()
+                except Exception as e:
+                    logger.warning(f"Could not migrate column {column} in livestock_assets: {e}")
+
+            # Migrations for livestock_expenses
+            expense_columns = {
+                "amount": "NUMERIC(14,2) DEFAULT 0",
+                "description": "VARCHAR(512)",
+                "feed_sub_type": "VARCHAR(50)",
+                "vet_sub_type": "VARCHAR(50)",
+                "utility_sub_type": "VARCHAR(50)",
+                "other_sub_type": "VARCHAR(50)",
+            }
+            for column, col_type in expense_columns.items():
+                try:
+                    check_sql = text(
+                        f"SELECT column_name FROM information_schema.columns "
+                        f"WHERE table_name='livestock_expenses' AND column_name='{column}'"
+                    )
+                    if not conn.execute(check_sql).fetchone():
+                        logger.info(f"Adding column {column} to livestock_expenses table...")
+                        conn.execute(text(f"ALTER TABLE livestock_expenses ADD COLUMN {column} {col_type}"))
+                        conn.commit()
+                except Exception as e:
+                    logger.warning(f"Could not migrate column {column} in livestock_expenses: {e}")
+
+            # Migrations for livestock_yields
+            yield_columns = {
+                "product_sub_type": "VARCHAR(50)",
+            }
+            for column, col_type in yield_columns.items():
+                try:
+                    check_sql = text(
+                        f"SELECT column_name FROM information_schema.columns "
+                        f"WHERE table_name='livestock_yields' AND column_name='{column}'"
+                    )
+                    if not conn.execute(check_sql).fetchone():
+                        logger.info(f"Adding column {column} to livestock_yields table...")
+                        conn.execute(text(f"ALTER TABLE livestock_yields ADD COLUMN {column} {col_type}"))
+                        conn.commit()
+                except Exception as e:
+                    logger.warning(f"Could not migrate column {column} in livestock_yields: {e}")
 
             session_columns = {
                 "refresh_jti": "VARCHAR(36)",

@@ -5,6 +5,8 @@ import 'package:intl/intl.dart';
 import 'package:agroledger/core/theme/app_colors.dart';
 import 'package:agroledger/core/theme/app_text_styles.dart';
 import 'package:agroledger/core/presentation/widgets/soft_card.dart';
+import 'package:agroledger/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:agroledger/features/auth/data/models/user_model.dart';
 import 'package:agroledger/features/calculator/data/models/livestock_asset_model.dart';
 import 'package:agroledger/features/calculator/data/models/calculator_summary_model.dart';
 import 'package:agroledger/features/calculator/presentation/bloc/calculator_bloc.dart';
@@ -15,11 +17,8 @@ import 'package:agroledger/features/calculator/presentation/widgets/expenses_bre
 import 'package:agroledger/features/calculator/presentation/widgets/earnings_sources_section.dart';
 import 'package:agroledger/features/calculator/domain/services/report_export_service.dart';
 import 'package:agroledger/core/di/service_locator.dart';
-
 import 'package:agroledger/features/calculator/presentation/widgets/add_asset_sheet.dart';
-
 import 'package:agroledger/features/calculator/data/models/predictive_forecast_model.dart';
-
 import 'package:agroledger/features/calculator/presentation/widgets/premium_paywall_sheet.dart';
 
 class CalculatorDashboardScreen extends StatefulWidget {
@@ -142,13 +141,10 @@ class _CalculatorDashboardScreenState extends State<CalculatorDashboardScreen> {
         title: 'Экспорт отчётов',
         message: 'Брендированные PDF-отчеты с печатью доступны только в Premium версии. В бесплатной версии доступен базовый CSV экспорт.',
       );
-      // Fallback to CSV for free users or stop? The prompt says "If no flag - redirect to paywall".
-      // Let's offer a choice or just do CSV if they close paywall.
       await sl<ReportExportService>().exportToCsv(summary);
       return;
     }
 
-    // Premium user choice
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -232,7 +228,7 @@ class _CalculatorDashboardScreenState extends State<CalculatorDashboardScreen> {
       ),
       body: BlocConsumer<CalculatorBloc, CalculatorState>(
         listenWhen: (previous, current) =>
-            current is CalculatorActionSuccess || current is CalculatorError,
+            current is CalculatorActionSuccess || current is CalculatorError || current is CalculatorFreeLimitReachedState || current is CalculatorPremiumLockedState,
         listener: (context, state) {
           if (state is CalculatorActionSuccess) {
             ScaffoldMessenger.of(context).showSnackBar(
