@@ -93,10 +93,6 @@ class _AuthFlowControllerState extends State<AuthFlowController> {
         builder: (context, state) {
           switch (state.status) {
             case AuthStatus.authorized:
-              final user = state.user;
-              if (user != null && !user.hasBusinessProfile) {
-                return const BusinessSetupScreen();
-              }
               return const MainScreen();
 
             case AuthStatus.authenticated:

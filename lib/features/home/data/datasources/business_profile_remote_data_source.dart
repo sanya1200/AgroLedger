@@ -3,6 +3,7 @@ import 'package:agroledger/core/network/dio_client.dart';
 abstract class BusinessProfileRemoteDataSource {
   Future<Map<String, dynamic>> getMyProfile();
   Future<Map<String, dynamic>> createProfile(Map<String, dynamic> data);
+  Future<Map<String, dynamic>> updateProfile(Map<String, dynamic> data);
 }
 
 class BusinessProfileRemoteDataSourceImpl implements BusinessProfileRemoteDataSource {
@@ -30,6 +31,12 @@ class BusinessProfileRemoteDataSourceImpl implements BusinessProfileRemoteDataSo
   @override
   Future<Map<String, dynamic>> createProfile(Map<String, dynamic> data) async {
     final response = await _client.dio.post('business/', data: data);
+    return Map<String, dynamic>.from(_unwrap(response.data));
+  }
+
+  @override
+  Future<Map<String, dynamic>> updateProfile(Map<String, dynamic> data) async {
+    final response = await _client.dio.patch('business/', data: data);
     return Map<String, dynamic>.from(_unwrap(response.data));
   }
 }

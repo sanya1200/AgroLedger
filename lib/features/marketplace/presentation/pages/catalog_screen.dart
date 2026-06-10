@@ -37,10 +37,46 @@ class _CatalogScreenState extends State<CatalogScreen> {
   }
 
   void _onAddProductPressed(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const AddProductScreen()),
-    );
+    final authState = context.read<AuthBloc>().state;
+    final user = authState.user;
+
+    if (user != null && user.hasBusinessProfile) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const AddProductScreen()),
+      );
+    } else {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          title: const Text('Нужен профиль хозяйства'),
+          content: const Text(
+            'Чтобы выставлять товары на продажу, пожалуйста, укажите название и местоположение вашего хозяйства в профиле.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Позже'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const BusinessSetupScreen()),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.sagePrimary,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: const Text('Настроить сейчас', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      );
+    }
   }
 
   @override

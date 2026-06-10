@@ -7,6 +7,8 @@ import 'package:agroledger/core/presentation/widgets/soft_card.dart';
 
 import 'package:agroledger/features/auth/presentation/widgets/animated_input_field.dart';
 
+import 'package:agroledger/features/home/presentation/pages/business_setup_screen.dart';
+
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
@@ -70,6 +72,23 @@ class ProfileScreen extends StatelessWidget {
                   padding: const EdgeInsets.all(0),
                   child: Column(
                     children: [
+                      _ProfileTile(
+                        icon: Icons.store_outlined,
+                        title: 'Профиль хозяйства',
+                        subtitle: user.hasBusinessProfile ? 'Данные организации' : 'Настроить сейчас',
+                        trailing: Icon(
+                          user.hasBusinessProfile ? Icons.check_circle : Icons.error_outline,
+                          color: user.hasBusinessProfile ? AppColors.sagePrimary : AppColors.accentGold,
+                          size: 20,
+                        ),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const BusinessSetupScreen()),
+                          );
+                        },
+                      ),
+                      const Divider(height: 1),
                       _ProfileTile(
                         icon: Icons.email_outlined,
                         title: 'Email',

@@ -21,23 +21,65 @@ class _BusinessSetupScreenState extends State<BusinessSetupScreen> {
   final _binController = TextEditingController();
   final _locationController = TextEditingController();
   final _descriptionController = TextEditingController();
-  bool _isLoading = false;
+  
+  bool _isLoading = true;
+  bool _isUpdating = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadExistingProfile();
+  }
+
+  Future<void> _loadExistingProfile() async {
+    final user = context.read<AuthBloc>().state.user;
+    if (user != null && user.hasBusinessProfile) {
+      try {
+        final dataSource = sl<BusinessProfileRemoteDataSource>();
+        final profile = await dataSource.getMyProfile();
+        setState(() {
+          _nameController.text = profile['name'] ?? '';
+          _binController.text = profile['bin_inn'] ?? '';
+          _locationController.text = profile['location'] ?? '';
+          _descriptionController.text = profile['description'] ?? '';
+          _isUpdating = true;
+        });
+      } catch (e) {
+        // Just continue as new if fetch fails
+      }
+    }
+    if (mounted) setState(() => _isLoading = false);
+  }
 
   Future<void> _submit() async {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
       try {
         final dataSource = sl<BusinessProfileRemoteDataSource>();
-        await dataSource.createProfile({
+        final data = {
           'name': _nameController.text.trim(),
           'bin_inn': _binController.text.trim(),
           'location': _locationController.text.trim(),
           'description': _descriptionController.text.trim(),
-        });
+        };
+
+        if (_isUpdating) {
+          await dataSource.updateProfile(data);
+        } else {
+          await dataSource.createProfile(data);
+        }
         
         if (mounted) {
-          // Refresh user data to update hasBusinessProfile
+          // Refresh user data
           context.read<AuthBloc>().add(AuthCheckStatusRequested());
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(_isUpdating ? 'Профиль обновлен' : 'Профиль создан'),
+              backgroundColor: AppColors.sagePrimary,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+          Navigator.pop(context);
         }
       } catch (e) {
         if (mounted) {
@@ -53,15 +95,23 @@ class _BusinessSetupScreenState extends State<BusinessSetupScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading && !_isUpdating) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
     return Scaffold(
       backgroundColor: AppColors.creamBackground,
-      appBar: AppBar(title: const Text('Профиль хозяйства')),
+      appBar: AppBar(
+        title: Text(_isUpdating ? 'Редактировать профиль' : 'Профиль хозяйства'),
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         child: Column(
           children: [
             Text(
-              'Почти готово! Расскажите о вашем хозяйстве, чтобы начать работу.',
+              _isUpdating 
+                ? 'Обновите информацию о вашем хозяйстве'
+                : 'Расскажите о вашем хозяйстве, чтобы начать работу на платформе.',
               textAlign: TextAlign.center,
               style: AppTextStyles.bodyMax.copyWith(color: AppColors.textLight),
             ),
@@ -106,7 +156,7 @@ class _BusinessSetupScreenState extends State<BusinessSetupScreen> {
                         onPressed: _isLoading ? null : _submit,
                         child: _isLoading
                             ? const CircularProgressIndicator(color: Colors.white)
-                            : const Text('Сохранить и продолжить'),
+                            : Text(_isUpdating ? 'Сохранить изменения' : 'Создать профиль'),
                       ),
                     ),
                   ],

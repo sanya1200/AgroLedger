@@ -3,6 +3,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:agroledger/core/theme/app_colors.dart';
 import 'package:agroledger/core/theme/app_text_styles.dart';
 import 'package:agroledger/core/presentation/widgets/soft_card.dart';
+import 'package:agroledger/features/home/presentation/pages/business_setup_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   final VoidCallback? onNavigateToCalculator;
@@ -80,11 +81,16 @@ class HomeScreen extends StatelessWidget {
                   onNavigateToMarket,
                 ),
                 _buildQuickAction(
-                  'Мои заказы',
-                  'История сделок',
-                  Icons.assignment_outlined,
+                  'Моё хозяйство',
+                  'Настройка профиля',
+                  Icons.storefront_outlined,
                   AppColors.sageDark,
-                  () {},
+                  () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const BusinessSetupScreen()),
+                    );
+                  },
                 ),
                 _buildQuickAction(
                   'Помощь',
