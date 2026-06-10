@@ -6,6 +6,7 @@ import 'package:agroledger/features/marketplace/presentation/bloc/marketplace_ev
 import 'package:agroledger/features/marketplace/presentation/bloc/marketplace_state.dart';
 import 'package:agroledger/features/marketplace/presentation/pages/add_product_screen.dart';
 import 'package:agroledger/features/marketplace/presentation/pages/product_details_screen.dart';
+import 'package:agroledger/features/home/presentation/pages/business_setup_screen.dart';
 import 'package:agroledger/features/marketplace/data/models/product_model.dart';
 import 'package:agroledger/core/theme/app_colors.dart';
 import 'package:agroledger/core/theme/app_text_styles.dart';
@@ -64,7 +65,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
                 Navigator.pop(context);
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const BusinessSetupScreen()),
+                  MaterialPageRoute(builder: (_) => BusinessSetupScreen()),
                 );
               },
               style: ElevatedButton.styleFrom(
