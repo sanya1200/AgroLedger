@@ -5,13 +5,14 @@ from app.core.database import get_db
 from app.core.dependencies import get_current_user
 from app.models.user import User
 from app.models.marketplace import ProductCategory
+from app.schemas.auth import BaseResponse
 from app.schemas.marketplace import ProductCreate, ProductUpdate, ProductResponse
 from app.services.marketplace_service import MarketplaceService
 
 router = APIRouter()
 
 
-@router.get("/products", response_model=List[ProductResponse])
+@router.get("/products", response_model=BaseResponse[List[ProductResponse]])
 def list_products(
     category: Optional[ProductCategory] = Query(None),
     skip: int = Query(0, ge=0),
@@ -22,10 +23,11 @@ def list_products(
     Публичный каталог товаров. Доступен без авторизации.
     """
     service = MarketplaceService(db)
-    return service.get_catalog(category, skip, limit)
+    products = service.get_catalog(category, skip, limit)
+    return BaseResponse(data=products)
 
 
-@router.get("/products/{product_id}", response_model=ProductResponse)
+@router.get("/products/{product_id}", response_model=BaseResponse[ProductResponse])
 def get_product(
     product_id: int,
     db: Session = Depends(get_db)
@@ -34,10 +36,11 @@ def get_product(
     Просмотр карточки конкретного товара. Публичный эндпоинт.
     """
     service = MarketplaceService(db)
-    return service.get_product(product_id)
+    product = service.get_product(product_id)
+    return BaseResponse(data=product)
 
 
-@router.post("/products", response_model=ProductResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/products", response_model=BaseResponse[ProductResponse], status_code=status.HTTP_201_CREATED)
 def create_product(
     product_in: ProductCreate,
     db: Session = Depends(get_db),
@@ -47,10 +50,11 @@ def create_product(
     Создание объявления. Доступно только пользователям с ролью 'business'.
     """
     service = MarketplaceService(db)
-    return service.create_product(current_user, product_in)
+    product = service.create_product(current_user, product_in)
+    return BaseResponse(data=product)
 
 
-@router.put("/products/{product_id}", response_model=ProductResponse)
+@router.put("/products/{product_id}", response_model=BaseResponse[ProductResponse])
 def update_product(
     product_id: int,
     product_in: ProductUpdate,
@@ -61,10 +65,11 @@ def update_product(
     Обновление товара. Доступно только владельцу (бизнес-профилю).
     """
     service = MarketplaceService(db)
-    return service.update_product(current_user, product_id, product_in)
+    product = service.update_product(current_user, product_id, product_in)
+    return BaseResponse(data=product)
 
 
-@router.delete("/products/{product_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/products/{product_id}", response_model=BaseResponse[None], status_code=status.HTTP_204_NO_CONTENT)
 def delete_product(
     product_id: int,
     db: Session = Depends(get_db),
@@ -75,4 +80,4 @@ def delete_product(
     """
     service = MarketplaceService(db)
     service.remove_product(current_user, product_id)
-    return None
+    return BaseResponse(data=None)

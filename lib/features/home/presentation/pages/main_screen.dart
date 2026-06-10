@@ -4,6 +4,8 @@ import 'package:agroledger/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:agroledger/features/marketplace/presentation/pages/catalog_screen.dart';
 import 'package:agroledger/features/calculator/presentation/pages/calculator_dashboard_screen.dart';
 import 'package:agroledger/features/home/presentation/pages/profile_screen.dart';
+import 'package:agroledger/features/home/presentation/pages/home_screen.dart';
+import 'package:agroledger/features/home/presentation/pages/help_support_screen.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -22,11 +24,19 @@ class _MainScreenState extends State<MainScreen> {
         final user = state.user;
         if (user == null) return const Scaffold(body: Center(child: CircularProgressIndicator()));
 
-        final bool isFarmer = user.role == 'farmer_business';
-        
-        final List<Widget> pages = isFarmer 
-          ? [const CalculatorDashboardScreen(), const CatalogScreen(), const ProfileScreen()]
-          : [const CatalogScreen(), const ProfileScreen()];
+        final List<Widget> pages = [
+          HomeScreen(
+            onNavigateToCalculator: () => setState(() => _currentIndex = 1),
+            onNavigateToMarket: () => setState(() => _currentIndex = 2),
+            onNavigateToHelp: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const HelpSupportScreen()),
+            ),
+          ),
+          const CalculatorDashboardScreen(),
+          const CatalogScreen(),
+          const ProfileScreen(),
+        ];
 
         if (_currentIndex >= pages.length) _currentIndex = 0;
 
@@ -38,19 +48,23 @@ class _MainScreenState extends State<MainScreen> {
           bottomNavigationBar: NavigationBar(
             selectedIndex: _currentIndex,
             onDestinationSelected: (index) => setState(() => _currentIndex = index),
-            destinations: [
-              if (isFarmer)
-                const NavigationDestination(
-                  icon: Icon(Icons.analytics_outlined),
-                  selectedIcon: Icon(Icons.analytics),
-                  label: 'Учет',
-                ),
-              const NavigationDestination(
+            destinations: const [
+              NavigationDestination(
+                icon: Icon(Icons.home_outlined),
+                selectedIcon: Icon(Icons.home),
+                label: 'Главная',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.calculate_outlined),
+                selectedIcon: Icon(Icons.calculate),
+                label: 'Калькулятор',
+              ),
+              NavigationDestination(
                 icon: Icon(Icons.shopping_bag_outlined),
                 selectedIcon: Icon(Icons.shopping_bag),
                 label: 'Маркет',
               ),
-              const NavigationDestination(
+              NavigationDestination(
                 icon: Icon(Icons.person_outline),
                 selectedIcon: Icon(Icons.person),
                 label: 'Профиль',

@@ -13,10 +13,15 @@ class MarketplaceRemoteDataSourceImpl implements MarketplaceRemoteDataSource {
   MarketplaceRemoteDataSourceImpl(this._client);
 
   dynamic _unwrap(dynamic responseData) {
-    if (responseData is Map && responseData['success'] == true) {
-      return responseData['data'];
+    if (responseData is Map) {
+      if (responseData['success'] == true) {
+        return responseData['data'];
+      }
+      throw responseData['error'] ?? 'Ошибка сервера';
     }
-    throw responseData?['error'] ?? 'Ошибка сервера';
+    // Если ответ пришел не в формате Map (например, напрямую List),
+    // возвращаем его как есть, чтобы не вызвать ошибку индексации.
+    return responseData;
   }
 
   @override
