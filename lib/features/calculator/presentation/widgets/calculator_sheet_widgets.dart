@@ -25,12 +25,28 @@ class CalculatorSheetHandle extends StatelessWidget {
 
 String assetCategoryLabel(String category) {
   switch (category) {
-    case LivestockCategories.cattleKrs:
-      return 'КРС';
-    case LivestockCategories.sheepMrs:
-      return 'МРС';
-    case LivestockCategories.poultryBirds:
-      return 'Птица';
+    case LivestockCategories.cattleMilk:
+      return 'Молочный КРС';
+    case LivestockCategories.cattleMeat:
+      return 'Мясной КРС';
+    case LivestockCategories.sheep:
+      return 'Овцеводство';
+    case LivestockCategories.goats:
+      return 'Козоводство';
+    case LivestockCategories.poultryLayers:
+      return 'Птица (Яйцо)';
+    case LivestockCategories.poultryBroilers:
+      return 'Птица (Мясо)';
+    case LivestockCategories.horses:
+      return 'Коневодство';
+    case LivestockCategories.pigs:
+      return 'Свиноводство';
+    case LivestockCategories.rabbits:
+      return 'Кролиководство';
+    case LivestockCategories.camels:
+      return 'Верблюды';
+    case LivestockCategories.bees:
+      return 'Пчеловодство';
     default:
       return category;
   }
@@ -156,43 +172,79 @@ class ProductTypes {
   static const String eggs = 'eggs';
   static const String meat = 'meat';
   static const String liveAnimals = 'live_animals';
+  static const String wool = 'wool';
+  static const String honey = 'honey';
+  static const String shubat = 'shubat';
+  static const String kumys = 'kumys';
 
   static List<ProductTypeOption> forCategory(String? category) {
     switch (category) {
-      case LivestockCategories.poultryBirds:
+      case LivestockCategories.poultryLayers:
         return const [
           ProductTypeOption(value: eggs, label: 'Яйца', unit: 'шт.'),
-          ProductTypeOption(value: meat, label: 'Мясо', unit: 'кг'),
+          ProductTypeOption(value: liveAnimals, label: 'Молодняк', unit: 'голов'),
         ];
-      case LivestockCategories.cattleKrs:
+      case LivestockCategories.poultryBroilers:
+        return const [
+          ProductTypeOption(value: meat, label: 'Мясо', unit: 'кг'),
+          ProductTypeOption(value: liveAnimals, label: 'Молодняк', unit: 'голов'),
+        ];
+      case LivestockCategories.cattleMilk:
         return const [
           ProductTypeOption(value: milk, label: 'Молоко', unit: 'л'),
-          ProductTypeOption(value: meat, label: 'Мясо', unit: 'кг'),
-          ProductTypeOption(
-            value: liveAnimals,
-            label: 'Живой вес / молодняк',
-            unit: 'голов',
-          ),
+          ProductTypeOption(value: liveAnimals, label: 'Телята', unit: 'голов'),
         ];
-      case LivestockCategories.sheepMrs:
+      case LivestockCategories.cattleMeat:
         return const [
+          ProductTypeOption(value: meat, label: 'Мясо (говядина)', unit: 'кг'),
+          ProductTypeOption(value: liveAnimals, label: 'Живой вес', unit: 'кг'),
+        ];
+      case LivestockCategories.sheep:
+        return const [
+          ProductTypeOption(value: meat, label: 'Мясо (баранина)', unit: 'кг'),
+          ProductTypeOption(value: wool, label: 'Шерсть', unit: 'кг'),
+          ProductTypeOption(value: liveAnimals, label: 'Ягнята/Живой вес', unit: 'голов'),
+        ];
+      case LivestockCategories.goats:
+        return const [
+          ProductTypeOption(value: milk, label: 'Молоко (козье)', unit: 'л'),
           ProductTypeOption(value: meat, label: 'Мясо', unit: 'кг'),
-          ProductTypeOption(
-            value: liveAnimals,
-            label: 'Живой вес / молодняк',
-            unit: 'голов',
-          ),
+          ProductTypeOption(value: liveAnimals, label: 'Козлята', unit: 'голов'),
+        ];
+      case LivestockCategories.horses:
+        return const [
+          ProductTypeOption(value: kumys, label: 'Кумыс', unit: 'л'),
+          ProductTypeOption(value: meat, label: 'Мясо (конина)', unit: 'кг'),
+          ProductTypeOption(value: liveAnimals, label: 'Жеребята', unit: 'голов'),
+        ];
+      case LivestockCategories.camels:
+        return const [
+          ProductTypeOption(value: shubat, label: 'Шубат', unit: 'л'),
+          ProductTypeOption(value: meat, label: 'Мясо (верблюжатина)', unit: 'кг'),
+          ProductTypeOption(value: liveAnimals, label: 'Верблюжата', unit: 'голов'),
+        ];
+      case LivestockCategories.bees:
+        return const [
+          ProductTypeOption(value: honey, label: 'Мед', unit: 'кг'),
+          ProductTypeOption(value: 'propolis', label: 'Прополис', unit: 'г'),
+          ProductTypeOption(value: 'pollen', label: 'Пыльца', unit: 'г'),
+        ];
+      case LivestockCategories.pigs:
+        return const [
+          ProductTypeOption(value: meat, label: 'Мясо (свинина)', unit: 'кг'),
+          ProductTypeOption(value: liveAnimals, label: 'Поросята', unit: 'голов'),
+        ];
+      case LivestockCategories.rabbits:
+        return const [
+          ProductTypeOption(value: meat, label: 'Мясо кролика', unit: 'кг'),
+          ProductTypeOption(value: 'fur', label: 'Шкурки', unit: 'шт.'),
         ];
       default:
         return const [
           ProductTypeOption(value: milk, label: 'Молоко', unit: 'л'),
           ProductTypeOption(value: eggs, label: 'Яйца', unit: 'шт.'),
           ProductTypeOption(value: meat, label: 'Мясо', unit: 'кг'),
-          ProductTypeOption(
-            value: liveAnimals,
-            label: 'Живой вес / молодняк',
-            unit: 'голов',
-          ),
+          ProductTypeOption(value: liveAnimals, label: 'Живой вес', unit: 'кг'),
         ];
     }
   }

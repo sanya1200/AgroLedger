@@ -7,9 +7,17 @@ from app.core.database import Base
 
 
 class LivestockCategory(str, enum.Enum):
-    CATTLE_KRS = "cattle_krs"
-    SHEEP_MRS = "sheep_mrs"
-    POULTRY_BIRDS = "poultry_birds"
+    CATTLE_MILK = "cattle_milk"
+    CATTLE_MEAT = "cattle_meat"
+    SHEEP = "sheep"
+    GOATS = "goats"
+    POULTRY_BROILERS = "poultry_broilers"
+    POULTRY_LAYERS = "poultry_layers"
+    HORSES = "horses"
+    PIGS = "pigs"
+    RABBITS = "rabbits"
+    CAMELS = "camels"
+    BEES = "bees"
 
 
 class ProductType(str, enum.Enum):
@@ -17,6 +25,13 @@ class ProductType(str, enum.Enum):
     EGGS = "eggs"
     MEAT = "meat"
     LIVE_ANIMALS = "live_animals"
+    WOOL = "wool"
+    HONEY = "honey"
+    SHUBAT = "shubat"
+    KUMYS = "kumys"
+    PROPOLIS = "propolis"
+    POLLEN = "pollen"
+    FUR = "fur"
 
 
 class LivestockAsset(Base):
@@ -26,7 +41,7 @@ class LivestockAsset(Base):
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     category: Mapped[str] = mapped_column(String(50), nullable=False)
     breed: Mapped[str] = mapped_column(String(255), nullable=False)
-    quantity: Mapped[int] = mapped_column(Integer, nullable=False)
+    quantity: Mapped[float] = mapped_column(Numeric(precision=14, scale=2), nullable=False)
     purchase_price: Mapped[float] = mapped_column(Numeric(precision=14, scale=2), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False

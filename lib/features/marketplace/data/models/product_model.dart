@@ -13,6 +13,8 @@ class ProductModel extends Equatable {
   final double stockQuantity;
   final bool isActive;
   final DateTime createdAt;
+  final String? sellerName;
+  final String? sellerPhone;
 
   const ProductModel({
     required this.id,
@@ -27,6 +29,8 @@ class ProductModel extends Equatable {
     required this.stockQuantity,
     required this.isActive,
     required this.createdAt,
+    this.sellerName,
+    this.sellerPhone,
   });
 
   factory ProductModel.fromJson(Map<String, dynamic> json) {
@@ -45,6 +49,8 @@ class ProductModel extends Equatable {
       stockQuantity: double.parse(json['stock_quantity'].toString()),
       isActive: json['is_active'] as bool,
       createdAt: DateTime.parse(json['created_at'] as String),
+      sellerName: json['seller_name'] as String?,
+      sellerPhone: json['seller_phone'] as String?,
     );
   }
 
@@ -62,5 +68,7 @@ class ProductModel extends Equatable {
         stockQuantity,
         isActive,
         createdAt,
+        sellerName,
+        sellerPhone,
       ];
 }

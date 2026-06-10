@@ -29,7 +29,39 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<AuthPinSignInRequested>(_onPinSignInRequested);
     on<AuthBiometricSignInRequested>(_onBiometricSignInRequested);
     on<AuthLogoutRequested>(_onLogoutRequested);
+    on<AuthDeleteAccountRequested>(_onDeleteAccountRequested);
+    on<AuthUpdateSettingsRequested>(_onUpdateSettingsRequested);
     on<AuthSessionExpired>(_onSessionExpired);
+  }
+
+  Future<void> _onUpdateSettingsRequested(
+    AuthUpdateSettingsRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    try {
+      final user = await _authRemoteDataSource.updateSettings(
+        isBiometricEnabled: event.isBiometricEnabled,
+        fullName: event.fullName,
+      );
+      emit(state.copyWith(user: user));
+    } catch (e) {
+      emit(state.copyWith(errorMessage: e.toString()));
+    }
+  }
+
+  Future<void> _onDeleteAccountRequested(
+    AuthDeleteAccountRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(state.copyWith(status: AuthStatus.loading));
+    try {
+      await _authRemoteDataSource.deleteAccount();
+      await _clearAllAuthData();
+      emit(state.copyWith(status: AuthStatus.unauthenticated, user: null));
+    } catch (e) {
+      emit(state.copyWith(
+          status: AuthStatus.authorized, errorMessage: e.toString()));
+    }
   }
 
   Future<void> _clearAllAuthData() async {

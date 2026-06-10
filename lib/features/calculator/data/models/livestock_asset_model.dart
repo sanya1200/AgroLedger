@@ -5,7 +5,7 @@ class LivestockAssetModel extends Equatable {
   final int? id;
   final String category;
   final String breed;
-  final int quantity;
+  final double quantity;
   final double purchasePrice;
   final DateTime? createdAt;
 
@@ -23,7 +23,7 @@ class LivestockAssetModel extends Equatable {
       id: json['id'] != null ? parseJsonInt(json['id']) : null,
       category: json['category']?.toString() ?? '',
       breed: json['breed']?.toString() ?? '',
-      quantity: parseJsonInt(json['quantity']),
+      quantity: parseJsonNumeric(json['quantity']),
       purchasePrice: parseJsonNumeric(json['purchase_price']),
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'].toString())
@@ -55,7 +55,7 @@ class LivestockAssetModel extends Equatable {
     int? id,
     String? category,
     String? breed,
-    int? quantity,
+    double? quantity,
     double? purchasePrice,
     DateTime? createdAt,
   }) {

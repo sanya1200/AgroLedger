@@ -5,28 +5,84 @@ import 'package:agroledger/core/theme/app_text_styles.dart';
 class LivestockCategories {
   LivestockCategories._();
 
-  static const String cattleKrs = 'cattle_krs';
-  static const String sheepMrs = 'sheep_mrs';
-  static const String poultryBirds = 'poultry_birds';
+  static const String cattleMilk = 'cattle_milk';
+  static const String cattleMeat = 'cattle_meat';
+  static const String sheep = 'sheep';
+  static const String goats = 'goats';
+  static const String poultryBroilers = 'poultry_broilers';
+  static const String poultryLayers = 'poultry_layers';
+  static const String horses = 'horses';
+  static const String pigs = 'pigs';
+  static const String rabbits = 'rabbits';
+  static const String camels = 'camels';
+  static const String bees = 'bees';
 
   static const List<CategoryOption> options = [
     CategoryOption(
-      value: cattleKrs,
-      title: 'КРС',
-      subtitle: 'Коровы, быки',
+      value: cattleMilk,
+      title: 'Молочный КРС',
+      subtitle: 'Коровы, телки',
+      icon: Icons.water_drop_outlined,
+    ),
+    CategoryOption(
+      value: cattleMeat,
+      title: 'Мясной КРС',
+      subtitle: 'Бычки, нагул',
       icon: Icons.grass_outlined,
     ),
     CategoryOption(
-      value: sheepMrs,
-      title: 'МРС',
-      subtitle: 'Овцы, козы',
+      value: sheep,
+      title: 'Овцеводство',
+      subtitle: 'Бараны, ягнята',
       icon: Icons.pets_outlined,
     ),
     CategoryOption(
-      value: poultryBirds,
-      title: 'Птица',
-      subtitle: 'Бройлеры, несушки',
+      value: goats,
+      title: 'Козоводство',
+      subtitle: 'Козы, козлята',
+      icon: Icons.gesture_outlined,
+    ),
+    CategoryOption(
+      value: poultryLayers,
+      title: 'Птица (Яйцо)',
+      subtitle: 'Куры-несушки',
       icon: Icons.egg_outlined,
+    ),
+    CategoryOption(
+      value: poultryBroilers,
+      title: 'Птица (Мясо)',
+      subtitle: 'Бройлеры, индейки',
+      icon: Icons.restaurant_menu_outlined,
+    ),
+    CategoryOption(
+      value: horses,
+      title: 'Коневодство',
+      subtitle: 'Лошади, жеребята',
+      icon: Icons.directions_run_outlined,
+    ),
+    CategoryOption(
+      value: camels,
+      title: 'Верблюды',
+      subtitle: 'Шубат, мясо',
+      icon: Icons.landscape_outlined,
+    ),
+    CategoryOption(
+      value: pigs,
+      title: 'Свиноводство',
+      subtitle: 'Свиньи, поросята',
+      icon: Icons.savings_outlined,
+    ),
+    CategoryOption(
+      value: rabbits,
+      title: 'Кролиководство',
+      subtitle: 'Мясо, мех',
+      icon: Icons.cruelty_free_outlined,
+    ),
+    CategoryOption(
+      value: bees,
+      title: 'Пчеловодство',
+      subtitle: 'Мед, прополис',
+      icon: Icons.hive_outlined,
     ),
   ];
 }
@@ -57,26 +113,32 @@ class CategorySelectorCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        for (var i = 0; i < LivestockCategories.options.length; i++) ...[
-          if (i > 0) const SizedBox(width: 12),
-          Expanded(
-            child: _CategoryTile(
-              option: LivestockCategories.options[i],
-              isSelected: selectedCategory == LivestockCategories.options[i].value,
-              onTap: () {
-                final value = LivestockCategories.options[i].value;
-                if (selectedCategory == value) {
-                  onCategorySelected(null);
-                } else {
-                  onCategorySelected(value);
-                }
-              },
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          for (var i = 0; i < LivestockCategories.options.length; i++) ...[
+            if (i > 0) const SizedBox(width: 12),
+            SizedBox(
+              width: 110,
+              child: _CategoryTile(
+                option: LivestockCategories.options[i],
+                isSelected: selectedCategory == LivestockCategories.options[i].value,
+                onTap: () {
+                  final value = LivestockCategories.options[i].value;
+                  if (selectedCategory == value) {
+                    onCategorySelected(null);
+                  } else {
+                    onCategorySelected(value);
+                  }
+                },
+              ),
             ),
-          ),
+          ],
         ],
-      ],
+      ),
     );
   }
 }
@@ -118,7 +180,7 @@ class _CategoryTileState extends State<_CategoryTile> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 280),
           curve: Curves.easeOutCubic,
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
           decoration: BoxDecoration(
             color: isSelected
                 ? AppColors.sagePrimary.withValues(alpha: 0.08)
@@ -150,7 +212,7 @@ class _CategoryTileState extends State<_CategoryTile> {
             children: [
               AnimatedContainer(
                 duration: const Duration(milliseconds: 280),
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   color: isSelected
                       ? AppColors.sagePrimary.withValues(alpha: 0.12)
@@ -159,16 +221,19 @@ class _CategoryTileState extends State<_CategoryTile> {
                 ),
                 child: Icon(
                   widget.option.icon,
-                  size: 26,
+                  size: 22,
                   color: isSelected ? AppColors.sagePrimary : AppColors.textLight,
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 8),
               Text(
                 widget.option.title,
                 textAlign: TextAlign.center,
-                style: AppTextStyles.bodyMedium.copyWith(
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.caption.copyWith(
                   fontWeight: FontWeight.bold,
+                  fontSize: 11,
                   color: isSelected ? AppColors.sagePrimary : AppColors.textDark,
                 ),
               ),
@@ -176,10 +241,10 @@ class _CategoryTileState extends State<_CategoryTile> {
               Text(
                 widget.option.subtitle,
                 textAlign: TextAlign.center,
-                maxLines: 2,
+                maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: AppTextStyles.caption.copyWith(
-                  fontSize: 10,
+                  fontSize: 9,
                   color: isSelected
                       ? AppColors.sagePrimary.withValues(alpha: 0.75)
                       : AppColors.textLight,

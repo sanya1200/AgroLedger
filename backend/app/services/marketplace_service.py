@@ -36,11 +36,7 @@ class MarketplaceService:
         return product
 
     def create_product(self, user: User, product_in: ProductCreate):
-        if user.role != UserRole.BUSINESS:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Only business users can post products."
-            )
+        # Universal access: removed role checks
         business_id = self._get_business_id(user)
         return self.repository.create_product(business_id, product_in)
 

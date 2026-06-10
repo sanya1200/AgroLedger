@@ -36,3 +36,11 @@ class Product(Base):
 
     # Relationships
     business: Mapped["BusinessProfile"] = relationship("BusinessProfile", back_populates="products")
+
+    @property
+    def seller_name(self) -> Optional[str]:
+        return self.business.name if self.business else None
+
+    @property
+    def seller_phone(self) -> Optional[str]:
+        return self.business.user.phone if self.business and self.business.user else None

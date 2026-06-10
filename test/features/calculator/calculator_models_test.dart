@@ -10,7 +10,7 @@ void main() {
     test('fromJson parses numeric strings safely', () {
       final model = LivestockAssetModel.fromJson(const {
         'id': 1,
-        'category': 'poultry_birds',
+        'category': 'poultry_layers',
         'breed': 'Бройлер',
         'quantity': 500,
         'purchase_price': '125000.50',
@@ -18,23 +18,23 @@ void main() {
       });
 
       expect(model.id, 1);
-      expect(model.category, 'poultry_birds');
+      expect(model.category, 'poultry_layers');
       expect(model.purchasePrice, 125000.50);
       expect(model.createdAt, isNotNull);
     });
 
     test('toCreateJson sends only create fields', () {
       const model = LivestockAssetModel(
-        category: 'cattle_krs',
+        category: 'cattle_meat',
         breed: 'Ангус',
         quantity: 20,
         purchasePrice: 800000,
       );
 
       expect(model.toCreateJson(), {
-        'category': 'cattle_krs',
+        'category': 'cattle_meat',
         'breed': 'Ангус',
-        'quantity': 20,
+        'quantity': 20.0,
         'purchase_price': 800000.0,
       });
     });

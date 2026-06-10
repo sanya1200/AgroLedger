@@ -39,3 +39,5 @@ class ProductResponse(ProductBase):
     business_id: int
     is_active: bool
     created_at: datetime
+    seller_name: Optional[str] = None
+    seller_phone: Optional[str] = None

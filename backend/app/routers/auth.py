@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.dependencies import get_current_user
 from app.models.user import User
-from app.schemas.auth import BaseResponse, SignUpRequest, SignInRequest, TokenResponse, UserDetailResponse, PinSetupRequest
+from app.schemas.auth import BaseResponse, SignUpRequest, SignInRequest, TokenResponse, UserDetailResponse, PinSetupRequest, UpdateSettingsRequest
 from app.services.auth_service import AuthService
 from app.core.security import get_password_hash
 from app.repositories.user_repository import UserRepository
@@ -63,6 +63,42 @@ def pin_setup(
     repo = UserRepository(db)
     repo.update_user_pin(current_user.id, get_password_hash(data.pin_code))
     return BaseResponse(data="PIN successfully set")
+
+@router.patch("/update-settings", response_model=BaseResponse[UserDetailResponse])
+def update_settings(
+    data: UpdateSettingsRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Updates user profile settings like biometric preference or name."""
+    repo = UserRepository(db)
+    user = repo.get_user_by_id(current_user.id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if data.is_biometric_enabled is not None:
+        user.is_biometric_enabled = data.is_biometric_enabled
+    if data.full_name is not None:
+        user.full_name = data.full_name
+
+    db.commit()
+    db.refresh(user)
+    return BaseResponse(data=UserDetailResponse.model_validate(user))
+
+@router.delete("/delete-account", response_model=BaseResponse[str])
+def delete_account(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Permanently deletes the user account and all associated data."""
+    repo = UserRepository(db)
+    user = repo.get_user_by_id(current_user.id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    db.delete(user)
+    db.commit()
+    return BaseResponse(data="Account successfully deleted")
 
 @router.get("/me", response_model=BaseResponse[UserDetailResponse])
 def get_me(current_user: User = Depends(get_current_user)):

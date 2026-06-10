@@ -8,14 +8,14 @@ from app.models.calculator import LivestockCategory, ProductType
 class AssetCreate(BaseModel):
     category: LivestockCategory
     breed: str = Field(..., min_length=1, max_length=255)
-    quantity: int = Field(..., gt=0)
+    quantity: float = Field(..., gt=0)
     purchase_price: Decimal = Field(..., ge=0)
 
 
 class AssetUpdate(BaseModel):
     category: Optional[LivestockCategory] = None
     breed: Optional[str] = Field(None, min_length=1, max_length=255)
-    quantity: Optional[int] = Field(None, gt=0)
+    quantity: Optional[float] = Field(None, gt=0)
     purchase_price: Optional[Decimal] = Field(None, ge=0)
 
 
@@ -26,7 +26,7 @@ class AssetResponse(BaseModel):
     user_id: int
     category: LivestockCategory
     breed: str
-    quantity: int
+    quantity: float
     purchase_price: Decimal
     created_at: datetime
 

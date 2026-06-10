@@ -56,6 +56,18 @@ class AuthPinSignInRequested extends AuthEvent {
 
 class AuthBiometricSignInRequested extends AuthEvent {}
 
+class AuthUpdateSettingsRequested extends AuthEvent {
+  final bool? isBiometricEnabled;
+  final String? fullName;
+
+  const AuthUpdateSettingsRequested({this.isBiometricEnabled, this.fullName});
+
+  @override
+  List<Object?> get props => [isBiometricEnabled, fullName];
+}
+
 class AuthLogoutRequested extends AuthEvent {}
+
+class AuthDeleteAccountRequested extends AuthEvent {}
 
 class AuthSessionExpired extends AuthEvent {}

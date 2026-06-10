@@ -17,6 +17,8 @@ import 'package:agroledger/features/calculator/presentation/widgets/earnings_sou
 import 'package:agroledger/features/calculator/domain/services/report_export_service.dart';
 import 'package:agroledger/core/di/service_locator.dart';
 
+import 'package:agroledger/features/calculator/presentation/widgets/add_asset_sheet.dart';
+
 class CalculatorDashboardScreen extends StatefulWidget {
   const CalculatorDashboardScreen({super.key});
 
@@ -67,20 +69,41 @@ class _CalculatorDashboardScreenState extends State<CalculatorDashboardScreen> {
   String _formatMoney(double value) => '${_currencyFormat.format(value)} ₸';
 
   String _quantityLabel(LivestockAssetModel asset) {
-    if (asset.category == LivestockCategories.poultryBirds) {
+    if (asset.category == LivestockCategories.poultryLayers || 
+        asset.category == LivestockCategories.poultryBroilers ||
+        asset.category == LivestockCategories.rabbits) {
       return '${asset.quantity} шт.';
+    }
+    if (asset.category == LivestockCategories.bees) {
+      return '${asset.quantity} семей';
     }
     return '${asset.quantity} голов';
   }
 
   String _categoryLabel(String category) {
     switch (category) {
-      case LivestockCategories.cattleKrs:
-        return 'КРС';
-      case LivestockCategories.sheepMrs:
-        return 'МРС';
-      case LivestockCategories.poultryBirds:
-        return 'Птица';
+      case LivestockCategories.cattleMilk:
+        return 'Молочный КРС';
+      case LivestockCategories.cattleMeat:
+        return 'Мясной КРС';
+      case LivestockCategories.sheep:
+        return 'Овцы';
+      case LivestockCategories.goats:
+        return 'Козы';
+      case LivestockCategories.poultryLayers:
+        return 'Птица (Яйцо)';
+      case LivestockCategories.poultryBroilers:
+        return 'Птица (Мясо)';
+      case LivestockCategories.horses:
+        return 'Лошади';
+      case LivestockCategories.pigs:
+        return 'Свиньи';
+      case LivestockCategories.rabbits:
+        return 'Кролики';
+      case LivestockCategories.camels:
+        return 'Верблюды';
+      case LivestockCategories.bees:
+        return 'Пчелы';
       default:
         return category;
     }
@@ -138,6 +161,11 @@ class _CalculatorDashboardScreenState extends State<CalculatorDashboardScreen> {
       appBar: AppBar(
         title: const Text('Умный калькулятор'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.add_circle_outline_rounded),
+            tooltip: 'Добавить группу',
+            onPressed: () => AddAssetSheet.show(context),
+          ),
           BlocBuilder<CalculatorBloc, CalculatorState>(
             builder: (context, state) {
               final summary = state is CalculatorSummaryLoaded
@@ -701,12 +729,28 @@ class _AssetListTile extends StatelessWidget {
 
   IconData _iconForCategory(String category) {
     switch (category) {
-      case LivestockCategories.cattleKrs:
+      case LivestockCategories.cattleMilk:
+        return Icons.water_drop_outlined;
+      case LivestockCategories.cattleMeat:
         return Icons.grass_outlined;
-      case LivestockCategories.sheepMrs:
+      case LivestockCategories.sheep:
         return Icons.pets_outlined;
-      case LivestockCategories.poultryBirds:
+      case LivestockCategories.goats:
+        return Icons.gesture_outlined;
+      case LivestockCategories.poultryLayers:
         return Icons.egg_outlined;
+      case LivestockCategories.poultryBroilers:
+        return Icons.restaurant_menu_outlined;
+      case LivestockCategories.horses:
+        return Icons.directions_run_outlined;
+      case LivestockCategories.camels:
+        return Icons.landscape_outlined;
+      case LivestockCategories.pigs:
+        return Icons.savings_outlined;
+      case LivestockCategories.rabbits:
+        return Icons.cruelty_free_outlined;
+      case LivestockCategories.bees:
+        return Icons.hive_outlined;
       default:
         return Icons.agriculture_outlined;
     }
@@ -720,24 +764,27 @@ class _EmptyAssetsPlaceholder extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SoftCard(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-      child: Column(
-        children: [
-          Icon(
-            Icons.inventory_2_outlined,
-            size: 40,
-            color: AppColors.sageLight.withValues(alpha: 0.6),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            hasCategoryFilter
-                ? 'В этой категории пока нет групп'
-                : 'Добавьте первую группу поголовья',
-            textAlign: TextAlign.center,
-            style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textLight),
-          ),
-        ],
+    return GestureDetector(
+      onTap: () => AddAssetSheet.show(context),
+      child: SoftCard(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+        child: Column(
+          children: [
+            Icon(
+              Icons.add_business_outlined,
+              size: 48,
+              color: AppColors.sagePrimary.withValues(alpha: 0.6),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              hasCategoryFilter
+                  ? 'В этой категории пока нет групп. Нажмите, чтобы добавить.'
+                  : 'Добавьте первую группу поголовья, чтобы начать учет.',
+              textAlign: TextAlign.center,
+              style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textLight),
+            ),
+          ],
+        ),
       ),
     );
   }

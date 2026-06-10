@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/auth_bloc.dart';
 import 'package:agroledger/features/auth/presentation/widgets/animated_input_field.dart';
-import 'package:agroledger/features/auth/presentation/widgets/premium_role_selector.dart';
 import 'package:agroledger/core/theme/app_colors.dart';
 import 'package:agroledger/core/theme/app_text_styles.dart';
 import 'package:agroledger/core/presentation/widgets/soft_card.dart';
@@ -20,7 +19,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
-  String _selectedRole = 'customer_buyer';
 
   @override
   void dispose() {
@@ -38,7 +36,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               email: _emailController.text.trim(),
               password: _passwordController.text.trim(),
               phone: _phoneController.text.trim(),
-              role: _selectedRole,
+              role: 'farmer_business', // Default role for universal access
               fullName: _nameController.text.trim(),
             ),
           );
@@ -125,11 +123,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           if (!RegExp(r'\d').hasMatch(v)) return 'Нужна цифра';
                           return null;
                         },
-                      ),
-                      const SizedBox(height: 24),
-                      PremiumRoleSelector(
-                        selectedRole: _selectedRole,
-                        onRoleSelected: (role) => setState(() => _selectedRole = role),
                       ),
                       const SizedBox(height: 32),
                       BlocBuilder<AuthBloc, AuthState>(

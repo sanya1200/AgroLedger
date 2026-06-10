@@ -16,7 +16,7 @@ class SignUpRequest(BaseModel):
     phone: str = Field(..., description="Phone in international format, e.g. +77001234567")
     password: str = Field(..., min_length=8)
     full_name: Optional[str] = None
-    role: str = Field(..., pattern="^(farmer_business|customer_buyer)$")
+    role: Optional[str] = "farmer_business"
 
     @field_validator("password")
     @classmethod
@@ -40,6 +40,10 @@ class SignInRequest(BaseModel):
 
 class PinSetupRequest(BaseModel):
     pin_code: str = Field(..., pattern=r"^\d{4}$")
+
+class UpdateSettingsRequest(BaseModel):
+    is_biometric_enabled: Optional[bool] = None
+    full_name: Optional[str] = None
 
 class TokenResponse(BaseModel):
     access_token: str

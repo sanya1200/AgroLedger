@@ -5,7 +5,7 @@ import 'package:agroledger/features/marketplace/presentation/bloc/marketplace_bl
 import 'package:agroledger/features/marketplace/presentation/bloc/marketplace_event.dart';
 import 'package:agroledger/features/marketplace/presentation/bloc/marketplace_state.dart';
 import 'package:agroledger/features/marketplace/presentation/pages/add_product_screen.dart';
-import 'package:agroledger/features/marketplace/data/models/product_model.dart';
+import 'package:agroledger/features/marketplace/presentation/pages/product_details_screen.dart';
 
 class CatalogScreen extends StatefulWidget {
   const CatalogScreen({super.key});
@@ -32,30 +32,40 @@ class _CatalogScreenState extends State<CatalogScreen> {
     context.read<MarketplaceBloc>().add(const LoadProductsRequested());
   }
 
+  void _onAddProductPressed(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const AddProductScreen()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.creamBackground,
       appBar: AppBar(
         title: const Text('Маркетплейс'),
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.search_rounded),
+            onPressed: () {},
+          ),
+        ],
       ),
-      floatingActionButton: BlocBuilder<AuthBloc, AuthState>(
-        builder: (context, authState) {
-          // Check if user is a farmer to show "Add Product" button
-          final bool isFarmer = authState.user?.role == 'farmer_business';
-
-          if (isFarmer) {
-            return FloatingActionButton(
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const AddProductScreen()),
-              ),
-              backgroundColor: Colors.green[800],
-              child: const Icon(Icons.add, color: Colors.white),
-            );
-          }
-          return const SizedBox.shrink();
-        },
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _onAddProductPressed(context),
+        backgroundColor: AppColors.sagePrimary,
+        elevation: 4,
+        icon: const Icon(Icons.add, color: Colors.white),
+        label: const Text(
+          'Продать',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 0.5,
+          ),
+        ),
       ),
       body: Column(
         children: [
@@ -64,14 +74,36 @@ class _CatalogScreenState extends State<CatalogScreen> {
             child: BlocBuilder<MarketplaceBloc, MarketplaceState>(
               builder: (context, state) {
                 if (state is MarketplaceLoading) {
-                  return const Center(child: CircularProgressIndicator());
+                  return const Center(
+                    child: CircularProgressIndicator(color: AppColors.sagePrimary),
+                  );
                 } else if (state is ProductsLoadSuccess) {
                   if (state.products.isEmpty) {
-                    return const Center(child: Text('Товары не найдены'));
+                    return _buildEmptyPlaceholder();
                   }
-                  return _buildProductGrid(state.products);
+                  return RefreshIndicator(
+                    color: AppColors.sagePrimary,
+                    onRefresh: () async {
+                      context.read<MarketplaceBloc>().add(LoadProductsRequested(category: _selectedCategory));
+                    },
+                    child: _buildProductGrid(state.products),
+                  );
                 } else if (state is MarketplaceFailure) {
-                  return Center(child: Text('Ошибка: ${state.message}'));
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.error_outline, size: 48, color: AppColors.errorSoft),
+                        const SizedBox(height: 16),
+                        Text('Ошибка: ${state.message}', style: AppTextStyles.bodyMedium),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: () => context.read<MarketplaceBloc>().add(const LoadProductsRequested()),
+                          child: const Text('Повторить'),
+                        ),
+                      ],
+                    ),
+                  );
                 }
                 return const SizedBox.shrink();
               },
@@ -83,15 +115,20 @@ class _CatalogScreenState extends State<CatalogScreen> {
   }
 
   Widget _buildCategoryFilter() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Row(
-        children: _categories.map((cat) {
+    return Container(
+      height: 60,
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemCount: _categories.length,
+        itemBuilder: (context, index) {
+          final cat = _categories[index];
           final isSelected = (_selectedCategory == cat['id']) || 
                            (_selectedCategory == null && cat['id'] == 'all');
+          
           return Padding(
-            padding: const EdgeInsets.only(right: 8.0),
+            padding: const EdgeInsets.only(right: 10),
             child: ChoiceChip(
               label: Text(cat['label']!),
               selected: isSelected,
@@ -103,23 +140,33 @@ class _CatalogScreenState extends State<CatalogScreen> {
                   LoadProductsRequested(category: _selectedCategory),
                 );
               },
-              selectedColor: Colors.green[800],
+              selectedColor: AppColors.sagePrimary,
+              backgroundColor: Colors.white,
+              elevation: isSelected ? 2 : 0,
+              pressElevation: 4,
               labelStyle: TextStyle(
-                color: isSelected ? Colors.white : Colors.black,
+                color: isSelected ? Colors.white : AppColors.sageDark,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+                side: BorderSide(
+                  color: isSelected ? AppColors.sagePrimary : AppColors.sageLight.withValues(alpha: 0.3),
+                ),
               ),
             ),
           );
-        }).toList(),
+        },
       ),
     );
   }
 
   Widget _buildProductGrid(List<ProductModel> products) {
     return GridView.builder(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 100), // Bottom padding for FAB
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        childAspectRatio: 0.7,
+        childAspectRatio: 0.72,
         crossAxisSpacing: 16,
         mainAxisSpacing: 16,
       ),
@@ -128,6 +175,27 @@ class _CatalogScreenState extends State<CatalogScreen> {
         final product = products[index];
         return _ProductCard(product: product);
       },
+    );
+  }
+
+  Widget _buildEmptyPlaceholder() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.inventory_2_outlined, size: 64, color: AppColors.sageLight.withValues(alpha: 0.5)),
+          const SizedBox(height: 16),
+          Text(
+            'Товары не найдены',
+            style: AppTextStyles.h2.copyWith(color: AppColors.textLight),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Попробуйте выбрать другую категорию',
+            style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textLight),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -139,66 +207,162 @@ class _ProductCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Container(
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: Colors.green[50],
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-              ),
-              child: product.imageUrl != null
-                  ? Image.network(product.imageUrl!, fit: BoxFit.cover)
-                  : Icon(Icons.inventory_2_outlined, size: 50, color: Colors.green[800]),
-            ),
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ProductDetailsScreen(product: product),
           ),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  product.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${product.priceRetail.toStringAsFixed(0)} ₸',
-                  style: TextStyle(
-                    color: Colors.green[800],
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                  ),
-                ),
-                if (product.priceWholesale != null)
-                  Text(
-                    'Опт от ${product.wholesaleMinQty}: ${product.priceWholesale!.toStringAsFixed(0)} ₸',
-                    style: const TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'В наличии: ${product.stockQuantity}',
-                      style: const TextStyle(fontSize: 12),
+        );
+      },
+      child: SoftCard(
+        padding: EdgeInsets.zero,
+        borderRadius: 20,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Stack(
+                children: [
+                  Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: AppColors.sageLight.withValues(alpha: 0.1),
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
                     ),
-                    if (product.isActive)
-                      const Icon(Icons.check_circle, size: 16, color: Colors.green)
-                  ],
-                ),
-              ],
+                    child: ClipRRect(
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                      child: product.imageUrl != null
+                          ? Image.network(
+                              product.imageUrl!,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) => _buildImagePlaceholder(),
+                            )
+                          : _buildImagePlaceholder(),
+                    ),
+                  ),
+                  Positioned(
+                    top: 10,
+                    right: 10,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.9),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        _getCategoryLabel(product.category),
+                        style: AppTextStyles.caption.copyWith(
+                          color: AppColors.sagePrimary,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 10,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    product.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.bodyMax.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.sageDark,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    '${product.priceRetail.toStringAsFixed(0)} ₸',
+                    style: AppTextStyles.bodyMax.copyWith(
+                      color: AppColors.sagePrimary,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  if (product.priceWholesale != null)
+                    Text(
+                      'Опт от ${product.wholesaleMinQty.toInt()} ед: ${product.priceWholesale!.toStringAsFixed(0)} ₸',
+                      style: AppTextStyles.caption.copyWith(fontSize: 10),
+                    )
+                  else
+                    const SizedBox(height: 14), // Spacer
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: product.stockQuantity > 0 
+                              ? AppColors.sagePrimary.withValues(alpha: 0.1)
+                              : AppColors.errorSoft.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          product.stockQuantity > 0 ? 'В наличии' : 'Нет в наличии',
+                          style: AppTextStyles.caption.copyWith(
+                            fontSize: 9,
+                            color: product.stockQuantity > 0 ? AppColors.sagePrimary : AppColors.errorSoft,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      Icon(
+                        Icons.verified_user_rounded,
+                        size: 14,
+                        color: AppColors.accentGold.withValues(alpha: 0.8),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
+  }
+
+  Widget _buildImagePlaceholder() {
+    return Center(
+      child: Icon(
+        _getIconForCategory(product.category),
+        size: 40,
+        color: AppColors.sagePrimary.withValues(alpha: 0.4),
+      ),
+    );
+  }
+
+  IconData _getIconForCategory(String category) {
+    switch (category) {
+      case 'meat': return Icons.restaurant_rounded;
+      case 'eggs': return Icons.egg_rounded;
+      case 'milk': return Icons.water_drop_rounded;
+      case 'feed': return Icons.grass_rounded;
+      case 'animals': return Icons.pets_rounded;
+      case 'equipment': return Icons.agriculture_rounded;
+      default: return Icons.inventory_2_outlined;
+    }
+  }
+
+  String _getCategoryLabel(String category) {
+    switch (category) {
+      case 'meat': return 'Мясо';
+      case 'eggs': return 'Яйца';
+      case 'milk': return 'Молоко';
+      case 'feed': return 'Корма';
+      case 'animals': return 'Животные';
+      case 'equipment': return 'Оборудование';
+      default: return 'Прочее';
+    }
   }
 }

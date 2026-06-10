@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:agroledger/core/theme/app_colors.dart';
 import 'package:agroledger/core/theme/app_text_styles.dart';
 import 'package:agroledger/core/presentation/widgets/soft_card.dart';
@@ -41,12 +42,14 @@ class HomeScreen extends StatelessWidget {
               'Как повысить удойность',
               'Советы по кормлению КРС в весенний период для достижения лучших результатов.',
               Icons.tips_and_updates_outlined,
+              'https://agroledger.kz/tips/1',
             ),
             const SizedBox(height: 12),
             _buildNewsItem(
               'Цены на рынке',
               'Обзор цен на мясо и молоко в вашем регионе за прошедшую неделю.',
               Icons.trending_up_rounded,
+              'https://agroledger.kz/market-trends',
             ),
             
             const SizedBox(height: 28),
@@ -98,36 +101,45 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildNewsItem(String title, String subtitle, IconData icon) {
-    return SoftCard(
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: AppColors.sagePrimary.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
+  Widget _buildNewsItem(String title, String subtitle, IconData icon, String url) {
+    return GestureDetector(
+      onTap: () async {
+        final uri = Uri.parse(url);
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        }
+      },
+      child: SoftCard(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppColors.sagePrimary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: AppColors.sagePrimary, size: 24),
             ),
-            child: Icon(icon, color: AppColors.sagePrimary, size: 24),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: AppTextStyles.bodyMax.copyWith(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle, 
-                  style: AppTextStyles.caption.copyWith(color: AppColors.textLight),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: AppTextStyles.bodyMax.copyWith(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle, 
+                    style: AppTextStyles.caption.copyWith(color: AppColors.textLight),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+            const Icon(Icons.chevron_right_rounded, color: AppColors.textLight, size: 20),
+          ],
+        ),
       ),
     );
   }

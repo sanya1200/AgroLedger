@@ -13,6 +13,8 @@ abstract class AuthRemoteDataSource {
     required String role,
     String? fullName,
   });
+  Future<UserModel> updateSettings({bool? isBiometricEnabled, String? fullName});
+  Future<void> deleteAccount();
   Future<UserModel> getMe();
 }
 
@@ -84,6 +86,45 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         return await login(email, password);
       } else {
         throw data?['error'] ?? 'Ошибка регистрации';
+      }
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  @override
+  Future<UserModel> updateSettings({bool? isBiometricEnabled, String? fullName}) async {
+    try {
+      final response = await _client.dio.patch(
+        'auth/update-settings',
+        data: {
+          if (isBiometricEnabled != null) 'is_biometric_enabled': isBiometricEnabled,
+          if (fullName != null) 'full_name': fullName,
+        },
+      );
+
+      final data = response.data;
+      if (data != null && data['success'] == true) {
+        return UserModel.fromJson(Map<String, dynamic>.from(data['data']));
+      } else {
+        throw data?['error'] ?? 'Ошибка обновления настроек';
+      }
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  @override
+  Future<void> deleteAccount() async {
+    try {
+      final response = await _client.dio.delete('auth/delete-account');
+      final data = response.data;
+      if (data == null || data['success'] != true) {
+        throw data?['error'] ?? 'Ошибка удаления аккаунта';
       }
     } on DioException catch (e) {
       throw _handleDioError(e);

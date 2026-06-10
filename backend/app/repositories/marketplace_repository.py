@@ -1,6 +1,8 @@
 from typing import List, Optional
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from app.models.marketplace import Product, ProductCategory
+from app.models.business_profile import BusinessProfile
+from app.models.user import User
 from app.schemas.marketplace import ProductCreate, ProductUpdate
 
 
@@ -20,7 +22,9 @@ class MarketplaceRepository:
         return db_obj
 
     def get_product_by_id(self, product_id: int) -> Optional[Product]:
-        return self.db.query(Product).filter(Product.id == product_id).first()
+        return self.db.query(Product).options(
+            joinedload(Product.business).joinedload(BusinessProfile.user)
+        ).filter(Product.id == product_id).first()
 
     def get_all_active_products(
         self,
@@ -28,7 +32,9 @@ class MarketplaceRepository:
         skip: int = 0,
         limit: int = 100
     ) -> List[Product]:
-        query = self.db.query(Product).filter(Product.is_active == True)
+        query = self.db.query(Product).options(
+            joinedload(Product.business).joinedload(BusinessProfile.user)
+        ).filter(Product.is_active == True)
         if category:
             query = query.filter(Product.category == category)
         return query.offset(skip).limit(limit).all()
