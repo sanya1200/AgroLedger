@@ -65,7 +65,6 @@ class _AddAssetSheetState extends State<AddAssetSheet> {
       breed: _breedController.text.trim(),
       quantity: double.parse(_quantityController.text),
       purchasePrice: double.parse(_costController.text),
-      status: 'active',
     );
 
     context.read<CalculatorBloc>().add(CreateAssetEvent(asset));
