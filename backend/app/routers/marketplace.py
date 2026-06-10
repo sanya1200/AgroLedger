@@ -69,7 +69,7 @@ def update_product(
     return BaseResponse(data=product)
 
 
-@router.delete("/products/{product_id}", response_model=BaseResponse[None], status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/products/{product_id}", response_model=BaseResponse[None])
 def delete_product(
     product_id: int,
     db: Session = Depends(get_db),
