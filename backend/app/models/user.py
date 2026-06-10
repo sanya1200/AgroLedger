@@ -23,6 +23,11 @@ class User(Base):
     hashed_pin: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     is_biometric_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
     role: Mapped[str] = mapped_column(String(50), default="customer_buyer", nullable=False)
+
+    # Premium Monetization
+    is_premium: Mapped[bool] = mapped_column(Boolean, default=False)
+    premium_until: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     is_verified: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=True)
@@ -36,6 +41,14 @@ class User(Base):
     @property
     def has_business_profile(self) -> bool:
         return self.business_profile is not None
+
+    @property
+    def premium_active(self) -> bool:
+        if not self.is_premium:
+            return False
+        if self.premium_until and self.premium_until < datetime.now(timezone.utc):
+            return False
+        return True
 
 class UserSession(Base):
     __tablename__ = "user_sessions"

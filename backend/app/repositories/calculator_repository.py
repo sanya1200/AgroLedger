@@ -18,7 +18,7 @@ class CalculatorRepository:
     def create_asset(self, user_id: int, data: AssetCreate) -> LivestockAsset:
         asset = LivestockAsset(
             user_id=user_id,
-            category=data.category.value,
+            category=data.category,
             breed=data.breed,
             quantity=data.quantity,
             purchase_price=data.purchase_price,
@@ -41,8 +41,6 @@ class CalculatorRepository:
 
     def update_asset(self, asset: LivestockAsset, data: AssetUpdate) -> LivestockAsset:
         update_fields = data.model_dump(exclude_unset=True)
-        if "category" in update_fields and update_fields["category"] is not None:
-            update_fields["category"] = update_fields["category"].value
         for field, value in update_fields.items():
             setattr(asset, field, value)
         self.db.commit()
@@ -56,10 +54,12 @@ class CalculatorRepository:
     def create_expense(self, data: ExpenseCreate) -> LivestockExpenses:
         expense = LivestockExpenses(
             asset_id=data.asset_id,
-            feed_cost=data.feed_cost,
-            vet_cost=data.vet_cost,
-            utility_cost=data.utility_cost,
-            other_cost=data.other_cost,
+            feed_sub_type=data.feed_sub_type,
+            vet_sub_type=data.vet_sub_type,
+            utility_sub_type=data.utility_sub_type,
+            other_sub_type=data.other_sub_type,
+            amount=data.amount,
+            description=data.description,
             date=data.date,
         )
         self.db.add(expense)
@@ -102,7 +102,7 @@ class CalculatorRepository:
     def create_yield(self, data: YieldCreate) -> LivestockYield:
         record = LivestockYield(
             asset_id=data.asset_id,
-            product_type=data.product_type.value,
+            product_sub_type=data.product_sub_type,
             volume=data.volume,
             earnings=data.earnings,
             date=data.date,
@@ -134,10 +134,7 @@ class CalculatorRepository:
         )
 
     def update_yield(self, record: LivestockYield, data: YieldUpdate) -> LivestockYield:
-        update_fields = data.model_dump(exclude_unset=True)
-        if "product_type" in update_fields and update_fields["product_type"] is not None:
-            update_fields["product_type"] = update_fields["product_type"].value
-        for field, value in update_fields.items():
+        for field, value in data.model_dump(exclude_unset=True).items():
             setattr(record, field, value)
         self.db.commit()
         self.db.refresh(record)

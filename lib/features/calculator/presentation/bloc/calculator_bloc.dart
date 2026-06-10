@@ -1,7 +1,15 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:agroledger/features/calculator/data/repositories/calculator_repository.dart';
-import 'package:agroledger/features/calculator/presentation/bloc/calculator_event.dart';
-import 'package:agroledger/features/calculator/presentation/bloc/calculator_state.dart';
+import 'package:equatable/equatable.dart';
+import '../../data/repositories/calculator_repository.dart';
+import '../../data/models/livestock_asset_model.dart';
+import '../../data/models/livestock_expense_model.dart';
+import '../../data/models/livestock_yield_model.dart';
+import '../../data/models/calculator_summary_model.dart';
+import '../../data/models/predictive_forecast_model.dart';
+import '../../data/datasources/calculator_remote_data_source.dart';
+
+part 'calculator_event.dart';
+part 'calculator_state.dart';
 
 class CalculatorBloc extends Bloc<CalculatorEvent, CalculatorState> {
   final CalculatorRepository _repository;
@@ -12,6 +20,8 @@ class CalculatorBloc extends Bloc<CalculatorEvent, CalculatorState> {
     on<CreateAssetEvent>(_onCreateAsset);
     on<RecordExpenseEvent>(_onRecordExpense);
     on<RecordYieldEvent>(_onRecordYield);
+    on<FetchPredictiveForecastEvent>(_onFetchForecast);
+    on<ActivatePremiumDebugEvent>(_onActivatePremium);
   }
 
   Future<void> _onFetchSummary(
@@ -35,16 +45,8 @@ class CalculatorBloc extends Bloc<CalculatorEvent, CalculatorState> {
     emit(const CalculatorLoading());
     try {
       final assets = await _repository.getAssets();
-      final currentState = state;
-      if (currentState is CalculatorSummaryLoaded) {
-        emit(CalculatorSummaryLoaded(
-          summary: currentState.summary,
-          assets: assets,
-        ));
-      } else {
-        final summary = await _repository.getSummary();
-        emit(CalculatorSummaryLoaded(summary: summary, assets: assets));
-      }
+      final summary = await _repository.getSummary();
+      emit(CalculatorSummaryLoaded(summary: summary, assets: assets));
     } catch (e) {
       emit(CalculatorError(e.toString()));
     }
@@ -61,6 +63,8 @@ class CalculatorBloc extends Bloc<CalculatorEvent, CalculatorState> {
         message: 'Группа поголовья успешно добавлена',
       ));
       add(const FetchCalculatorSummaryEvent());
+    } on FreeLimitException {
+      emit(const CalculatorFreeLimitReachedState());
     } catch (e) {
       emit(CalculatorError(e.toString()));
     }
@@ -93,6 +97,34 @@ class CalculatorBloc extends Bloc<CalculatorEvent, CalculatorState> {
         message: 'Доход успешно записан',
       ));
       add(FetchCalculatorSummaryEvent(assetId: event.yieldData.assetId));
+    } catch (e) {
+      emit(CalculatorError(e.toString()));
+    }
+  }
+
+  Future<void> _onFetchForecast(
+    FetchPredictiveForecastEvent event,
+    Emitter<CalculatorState> emit,
+  ) async {
+    emit(const CalculatorLoading());
+    try {
+      final forecast = await _repository.getPredictiveForecast(event.assetId);
+      emit(PredictiveForecastLoadedState(forecast));
+    } on PremiumRequiredException {
+      emit(const CalculatorPremiumLockedState('Предиктивная аналитика'));
+    } catch (e) {
+      emit(CalculatorError(e.toString()));
+    }
+  }
+
+  Future<void> _onActivatePremium(
+    ActivatePremiumDebugEvent event,
+    Emitter<CalculatorState> emit,
+  ) async {
+    try {
+      await _repository.activatePremiumDebug();
+      emit(const CalculatorActionSuccess(message: 'Премиум активирован!'));
+      add(const FetchCalculatorSummaryEvent());
     } catch (e) {
       emit(CalculatorError(e.toString()));
     }

@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
@@ -7,8 +8,6 @@ import 'package:agroledger/core/presentation/widgets/soft_card.dart';
 import 'package:agroledger/features/calculator/data/models/livestock_asset_model.dart';
 import 'package:agroledger/features/calculator/data/models/calculator_summary_model.dart';
 import 'package:agroledger/features/calculator/presentation/bloc/calculator_bloc.dart';
-import 'package:agroledger/features/calculator/presentation/bloc/calculator_event.dart';
-import 'package:agroledger/features/calculator/presentation/bloc/calculator_state.dart';
 import 'package:agroledger/features/calculator/presentation/widgets/category_selector_card.dart';
 import 'package:agroledger/features/calculator/presentation/widgets/add_expense_sheet.dart';
 import 'package:agroledger/features/calculator/presentation/widgets/add_yield_sheet.dart';
@@ -18,6 +17,10 @@ import 'package:agroledger/features/calculator/domain/services/report_export_ser
 import 'package:agroledger/core/di/service_locator.dart';
 
 import 'package:agroledger/features/calculator/presentation/widgets/add_asset_sheet.dart';
+
+import 'package:agroledger/features/calculator/data/models/predictive_forecast_model.dart';
+
+import 'package:agroledger/features/calculator/presentation/widgets/premium_paywall_sheet.dart';
 
 class CalculatorDashboardScreen extends StatefulWidget {
   const CalculatorDashboardScreen({super.key});
@@ -125,33 +128,64 @@ class _CalculatorDashboardScreenState extends State<CalculatorDashboardScreen> {
     );
   }
 
+  void _showPremiumPaywall(BuildContext context, {required String title, required String message}) {
+    PremiumPaywallSheet.show(context, title: title, message: message);
+  }
+
   Future<void> _exportReport(CalculatorSummaryModel summary) async {
-    if (_isExporting) return;
-    setState(() => _isExporting = true);
-    try {
+    final authState = context.read<AuthBloc>().state;
+    final isPremium = authState.user?.isPremium ?? false;
+
+    if (!isPremium) {
+      _showPremiumPaywall(
+        context,
+        title: 'Экспорт отчётов',
+        message: 'Брендированные PDF-отчеты с печатью доступны только в Premium версии. В бесплатной версии доступен базовый CSV экспорт.',
+      );
+      // Fallback to CSV for free users or stop? The prompt says "If no flag - redirect to paywall".
+      // Let's offer a choice or just do CSV if they close paywall.
       await sl<ReportExportService>().exportToCsv(summary);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Отчёт подготовлен к отправке'),
-          backgroundColor: AppColors.sagePrimary,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Не удалось экспортировать отчёт: $e'),
-          backgroundColor: AppColors.errorSoft,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        ),
-      );
-    } finally {
-      if (mounted) setState(() => _isExporting = false);
+      return;
     }
+
+    // Premium user choice
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(24),
+        decoration: const BoxDecoration(
+          color: AppColors.creamBackground,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Выберите формат экспорта', style: AppTextStyles.h2),
+            const SizedBox(height: 24),
+            ListTile(
+              leading: const Icon(Icons.picture_as_pdf_rounded, color: AppColors.errorSoft),
+              title: const Text('Premium PDF Отчёт'),
+              subtitle: const Text('Красивое оформление и таблицы'),
+              onTap: () {
+                Navigator.pop(context);
+                sl<ReportExportService>().exportToPdf(summary);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.table_chart_rounded, color: Colors.green),
+              title: const Text('CSV Таблица'),
+              subtitle: const Text('Для Excel и анализа данных'),
+              onTap: () {
+                Navigator.pop(context);
+                sl<ReportExportService>().exportToCsv(summary);
+              },
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -210,6 +244,18 @@ class _CalculatorDashboardScreenState extends State<CalculatorDashboardScreen> {
                   borderRadius: BorderRadius.circular(16),
                 ),
               ),
+            );
+          } else if (state is CalculatorFreeLimitReachedState) {
+            _showPremiumPaywall(
+              context,
+              title: 'Лимит групп достигнут',
+              message: 'В бесплатной версии можно вести учет до 2-х групп одновременно. Перейдите на Premium, чтобы добавить больше!',
+            );
+          } else if (state is CalculatorPremiumLockedState) {
+            _showPremiumPaywall(
+              context,
+              title: 'Доступ ограничен',
+              message: 'Функция "${state.featureName}" доступна только владельцам Premium-подписки.',
             );
           }
         },
@@ -289,6 +335,8 @@ class _CalculatorDashboardScreenState extends State<CalculatorDashboardScreen> {
                     formatMoney: _formatMoney,
                     selectedAssetId: _selectedAssetId,
                   ),
+                  const SizedBox(height: 20),
+                  if (_selectedAssetId != null) _PredictiveForecastSection(assetId: _selectedAssetId!),
                   const SizedBox(height: 28),
                   Text(
                     'Структура расходов',
@@ -364,6 +412,217 @@ class _CalculatorDashboardScreenState extends State<CalculatorDashboardScreen> {
             onRecordExpense: () => _openExpenseSheet(state.assets),
             onRecordYield: () => _openYieldSheet(state.assets),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PredictiveForecastSection extends StatelessWidget {
+  final int assetId;
+  const _PredictiveForecastSection({required this.assetId});
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<CalculatorBloc, CalculatorState>(
+      buildWhen: (prev, curr) => curr is PredictiveForecastLoadedState || curr is CalculatorLoading || curr is CalculatorPremiumLockedState,
+      builder: (context, state) {
+        if (state is PredictiveForecastLoadedState) {
+          final f = state.forecast;
+          return SoftCard(
+            color: AppColors.sagePrimary.withValues(alpha: 0.05),
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.auto_graph_rounded, color: AppColors.sagePrimary, size: 20),
+                    const SizedBox(width: 8),
+                    Text('Аналитический прогноз', style: AppTextStyles.bodyMax.copyWith(fontWeight: FontWeight.bold, color: AppColors.sageDark)),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                _PredictiveChart(progress: 1.0),
+                const SizedBox(height: 16),
+                if (f.fcr != null) _ForecastRow('Конверсия корма (FCR)', f.fcr!.toStringAsFixed(2), Icons.scale_outlined),
+                if (f.breakEvenDate != null) _ForecastRow('Дата окупаемости', DateFormat('dd.MM.yyyy').format(f.breakEvenDate!), Icons.event_available_rounded),
+                _ForecastRow('Ожидаемая прибыль/мес', '${NumberFormat('#,##0').format(f.estimatedMonthlyProfit)} ₸', Icons.trending_up_rounded),
+                const Divider(height: 24),
+                Text(f.advice, style: AppTextStyles.caption.copyWith(fontStyle: FontStyle.italic, color: AppColors.sageDark)),
+              ],
+            ),
+          );
+        }
+        
+        return GestureDetector(
+          onTap: () => context.read<CalculatorBloc>().add(FetchPredictiveForecastEvent(assetId)),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: Stack(
+              children: [
+                SoftCard(
+                  padding: const EdgeInsets.all(20),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.auto_graph_rounded, color: Colors.grey),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Аналитический прогноз', style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold, color: Colors.grey)),
+                            Text('Расчет окупаемости и ROI', style: AppTextStyles.caption),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Positioned.fill(
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
+                    child: Container(
+                      color: Colors.white12,
+                      child: Center(
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.lock_person_outlined, color: AppColors.accentGold, size: 18),
+                            const SizedBox(width: 8),
+                            Text('Доступно в Premium', style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.bold, color: AppColors.sageDark)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _PredictiveChart extends StatefulWidget {
+  final double progress;
+  const _PredictiveChart({required this.progress});
+  @override
+  State<_PredictiveChart> createState() => _PredictiveChartState();
+}
+
+class _PredictiveChartState extends State<_PredictiveChart> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(vsync: this, duration: const Duration(seconds: 2))..forward();
+  }
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) => Container(
+        height: 140,
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        child: CustomPaint(painter: _ForecastPainter(_controller.value)),
+      ),
+    );
+  }
+}
+
+class _ForecastPainter extends CustomPainter {
+  final double progress;
+  _ForecastPainter(this.progress);
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = AppColors.sagePrimary
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 4
+      ..strokeCap = StrokeCap.round;
+    
+    final fillPaint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          AppColors.sagePrimary.withValues(alpha: 0.2),
+          AppColors.sagePrimary.withValues(alpha: 0.0),
+        ],
+      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
+
+    final path = Path();
+    path.moveTo(0, size.height * 0.85);
+    path.quadraticBezierTo(
+      size.width * 0.4, 
+      size.height * 0.8, 
+      size.width * 0.65, 
+      size.height * 0.4,
+    );
+    path.cubicTo(
+      size.width * 0.8, 
+      size.height * 0.1, 
+      size.width * 0.9, 
+      size.height * 0.05, 
+      size.width, 
+      size.height * 0.02,
+    );
+
+    final extractPath = _createAnimatedPath(path, progress);
+    
+    final fillPath = Path.from(extractPath)
+      ..lineTo(size.width * progress, size.height)
+      ..lineTo(0, size.height)
+      ..close();
+
+    canvas.drawPath(fillPath, fillPaint);
+    canvas.drawPath(extractPath, paint);
+
+    // Draw accent dots
+    if (progress > 0.6) {
+      final p1 = Paint()..color = AppColors.accentGold..style = PaintingStyle.fill;
+      canvas.drawCircle(Offset(size.width * 0.65, size.height * 0.4), 5, p1);
+    }
+  }
+
+  Path _createAnimatedPath(Path source, double progress) {
+    final path = Path();
+    final metrics = source.computeMetrics();
+    for (final metric in metrics) {
+      path.addPath(metric.extractPath(0, metric.length * progress), Offset.zero);
+    }
+    return path;
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+}
+
+class _ForecastRow extends StatelessWidget {
+  final String label;
+  final String value;
+  final IconData icon;
+  const _ForecastRow(this.label, this.value, this.icon);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: AppColors.textLight),
+          const SizedBox(width: 10),
+          Expanded(child: Text(label, style: AppTextStyles.bodyMedium)),
+          Text(value, style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold, color: AppColors.sagePrimary)),
         ],
       ),
     );

@@ -1,7 +1,4 @@
-import 'package:equatable/equatable.dart';
-import 'package:agroledger/features/calculator/data/models/livestock_asset_model.dart';
-import 'package:agroledger/features/calculator/data/models/livestock_expense_model.dart';
-import 'package:agroledger/features/calculator/data/models/livestock_yield_model.dart';
+part of 'calculator_bloc.dart';
 
 abstract class CalculatorEvent extends Equatable {
   const CalculatorEvent();
@@ -12,20 +9,16 @@ abstract class CalculatorEvent extends Equatable {
 
 class FetchCalculatorSummaryEvent extends CalculatorEvent {
   final int? assetId;
-
   const FetchCalculatorSummaryEvent({this.assetId});
 
   @override
   List<Object?> get props => [assetId];
 }
 
-class FetchAssetsEvent extends CalculatorEvent {
-  const FetchAssetsEvent();
-}
+class FetchAssetsEvent extends CalculatorEvent {}
 
 class CreateAssetEvent extends CalculatorEvent {
   final LivestockAssetModel asset;
-
   const CreateAssetEvent(this.asset);
 
   @override
@@ -34,7 +27,6 @@ class CreateAssetEvent extends CalculatorEvent {
 
 class RecordExpenseEvent extends CalculatorEvent {
   final LivestockExpenseModel expense;
-
   const RecordExpenseEvent(this.expense);
 
   @override
@@ -43,9 +35,18 @@ class RecordExpenseEvent extends CalculatorEvent {
 
 class RecordYieldEvent extends CalculatorEvent {
   final LivestockYieldModel yieldData;
-
   const RecordYieldEvent(this.yieldData);
 
   @override
   List<Object?> get props => [yieldData];
 }
+
+class FetchPredictiveForecastEvent extends CalculatorEvent {
+  final int assetId;
+  const FetchPredictiveForecastEvent(this.assetId);
+
+  @override
+  List<Object?> get props => [assetId];
+}
+
+class ActivatePremiumDebugEvent extends CalculatorEvent {}

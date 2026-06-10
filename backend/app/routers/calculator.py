@@ -2,7 +2,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 from app.core.database import get_db
-from app.core.dependencies import get_current_user
+from app.core.dependencies import get_current_user, check_premium_status
 from app.models.user import User
 from app.schemas.auth import BaseResponse
 from app.schemas.calculator import (
@@ -13,6 +13,7 @@ from app.schemas.calculator import (
     YieldCreate,
     YieldResponse,
     CalculatorSummaryResponse,
+    PredictiveForecastResponse,
 )
 from app.services.calculator_service import CalculatorService
 
@@ -83,3 +84,17 @@ def get_summary(
     service = CalculatorService(db)
     summary = service.get_analytics_summary(current_user.id, asset_id=asset_id)
     return BaseResponse(data=summary)
+
+
+@router.get("/predictive-forecast", response_model=BaseResponse[PredictiveForecastResponse])
+def get_predictive_forecast(
+    asset_id: int = Query(..., gt=0),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(check_premium_status),
+):
+    """
+    PREMIUM FEATURE: Calculates FCR for poultry or break-even date for other assets.
+    """
+    service = CalculatorService(db)
+    forecast = service.get_predictive_forecast(current_user, asset_id)
+    return BaseResponse(data=forecast)

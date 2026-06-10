@@ -4,12 +4,16 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 import 'package:agroledger/features/calculator/data/models/calculator_summary_model.dart';
 import 'package:agroledger/features/calculator/presentation/widgets/calculator_sheet_widgets.dart';
 
 class ReportExportService {
   final _dateFormat = DateFormat('yyyy-MM-dd_HH-mm');
   final _displayDateFormat = DateFormat('dd.MM.yyyy HH:mm');
+  final _currencyFormat = NumberFormat('#,##0.00', 'ru_RU');
 
   String buildCsv(CalculatorSummaryModel summary) {
     final buffer = StringBuffer();
@@ -21,54 +25,29 @@ class ReportExportService {
 
     writeRow(['AgroLedger — Финансовый отчёт калькулятора']);
     writeRow(['Дата формирования', generatedAt]);
-    if (summary.assetId != null) {
-      writeRow(['Фильтр по активу ID', summary.assetId.toString()]);
-    }
     writeRow(['']);
 
     writeRow(['Показатель', 'Значение (₸)']);
-    writeRow(['Стартовые вложения', _formatNumber(summary.initialInvestment)]);
-    writeRow(['Операционные расходы', _formatNumber(summary.operatingExpenses)]);
-    writeRow(['Общие расходы', _formatNumber(summary.totalCosts)]);
-    writeRow(['Общий доход', _formatNumber(summary.totalEarnings)]);
-    writeRow(['Чистая прибыль', _formatNumber(summary.netProfit)]);
+    writeRow(['Стартовые вложения', _currencyFormat.format(summary.initialInvestment)]);
+    writeRow(['Операционные расходы', _currencyFormat.format(summary.operatingExpenses)]);
+    writeRow(['Общие расходы', _currencyFormat.format(summary.totalCosts)]);
+    writeRow(['Общий доход', _currencyFormat.format(summary.totalEarnings)]);
+    writeRow(['Чистая прибыль', _currencyFormat.format(summary.netProfit)]);
     writeRow(['ROI (%)', summary.roi.toStringAsFixed(2)]);
-    writeRow(['Количество активных групп', summary.assetsCount.toString()]);
     writeRow(['']);
 
-    writeRow(['Структура операционных расходов', 'Сумма (₸)', 'Доля (%)']);
-    _writeExpenseRow(writeRow, 'Корма', summary.feedCost, summary.operatingExpenses);
-    _writeExpenseRow(writeRow, 'Ветеринария', summary.vetCost, summary.operatingExpenses);
-    _writeExpenseRow(
-      writeRow,
-      'Коммунальные услуги',
-      summary.utilityCost,
-      summary.operatingExpenses,
-    );
-    _writeExpenseRow(writeRow, 'Прочее', summary.otherCost, summary.operatingExpenses);
-    writeRow(['']);
-
-    writeRow(['Источники доходов', 'Сумма (₸)']);
-    if (summary.earningsByProduct.isEmpty) {
-      writeRow(['Нет данных', '0']);
-    } else {
-      final sortedEntries = summary.earningsByProduct.entries.toList()
-        ..sort((a, b) => b.value.compareTo(a.value));
-      for (final entry in sortedEntries) {
-        writeRow([
-          _productLabel(entry.key),
-          _formatNumber(entry.value),
-        ]);
-      }
-    }
+    writeRow(['Структура расходов', 'Сумма (₸)']);
+    writeRow(['Корма', _currencyFormat.format(summary.feedCost)]);
+    writeRow(['Ветеринария', _currencyFormat.format(summary.vetCost)]);
+    writeRow(['Коммунальные услуги', _currencyFormat.format(summary.utilityCost)]);
+    writeRow(['Прочее', _currencyFormat.format(summary.otherCost)]);
 
     return buffer.toString();
   }
 
   Future<void> exportToCsv(CalculatorSummaryModel summary) async {
     final csvContent = buildCsv(summary);
-    final fileName =
-        'agroledger_report_${_dateFormat.format(DateTime.now())}.csv';
+    final fileName = 'agroledger_report_${_dateFormat.format(DateTime.now())}.csv';
 
     if (kIsWeb) {
       await Clipboard.setData(ClipboardData(text: csvContent));
@@ -82,26 +61,86 @@ class ReportExportService {
     await Share.shareXFiles(
       [XFile(file.path, mimeType: 'text/csv', name: fileName)],
       subject: 'AgroLedger — Финансовый отчёт',
-      text: 'Финансовый отчёт AgroLedger от ${_displayDateFormat.format(DateTime.now())}',
     );
   }
 
-  Future<void> copyToClipboard(CalculatorSummaryModel summary) async {
-    await Clipboard.setData(ClipboardData(text: buildCsv(summary)));
+  Future<void> exportToPdf(CalculatorSummaryModel summary) async {
+    final pdf = pw.Document();
+    final font = await PdfGoogleFonts.latoRegular();
+    final fontBold = await PdfGoogleFonts.latoBold();
+
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        build: (context) {
+          return pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text('AgroLedger', style: pw.TextStyle(font: fontBold, fontSize: 24, color: PdfColors.green800)),
+                  pw.Text('ФИНАНСОВЫЙ ОТЧЕТ', style: pw.TextStyle(font: fontBold, color: PdfColors.grey700)),
+                ],
+              ),
+              pw.Divider(thickness: 2, color: PdfColors.green900),
+              pw.SizedBox(height: 20),
+              pw.Text('Дата формирования: ${_displayDateFormat.format(DateTime.now())}', style: pw.TextStyle(font: font)),
+              pw.SizedBox(height: 30),
+              
+              pw.Text('Основные показатели', style: pw.TextStyle(font: fontBold, fontSize: 18)),
+              pw.SizedBox(height: 10),
+              _buildPdfTable([
+                ['Показатель', 'Сумма (₸)'],
+                ['Стартовые вложения', _currencyFormat.format(summary.initialInvestment)],
+                ['Операционные расходы', _currencyFormat.format(summary.operatingExpenses)],
+                ['Общий доход', _currencyFormat.format(summary.totalEarnings)],
+                ['Чистая прибыль', _currencyFormat.format(summary.netProfit)],
+                ['ROI', '${summary.roi}%'],
+              ], font, fontBold),
+              
+              pw.SizedBox(height: 40),
+              pw.Text('Структура операционных расходов', style: pw.TextStyle(font: fontBold, fontSize: 18)),
+              pw.SizedBox(height: 10),
+              _buildPdfTable([
+                ['Категория', 'Сумма (₸)', 'Доля'],
+                ['Корма', _currencyFormat.format(summary.feedCost), _percent(summary.feedCost, summary.operatingExpenses)],
+                ['Ветеринария', _currencyFormat.format(summary.vetCost), _percent(summary.vetCost, summary.operatingExpenses)],
+                ['Коммунальные услуги', _currencyFormat.format(summary.utilityCost), _percent(summary.utilityCost, summary.operatingExpenses)],
+                ['Прочее', _currencyFormat.format(summary.otherCost), _percent(summary.otherCost, summary.operatingExpenses)],
+              ], font, fontBold),
+              
+              pw.Spacer(),
+              pw.Divider(),
+              pw.Align(
+                alignment: pw.Alignment.centerRight,
+                child: pw.Text('Сформировано в AgroLedger Premium', style: pw.TextStyle(font: font, fontSize: 10, color: PdfColors.grey600)),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+
+    await Printing.sharePdf(bytes: await pdf.save(), filename: 'agroledger_premium_report.pdf');
   }
 
-  void _writeExpenseRow(
-    void Function(List<String>) writeRow,
-    String label,
-    double amount,
-    double total,
-  ) {
-    final share = total > 0 ? (amount / total * 100).toStringAsFixed(1) : '0.0';
-    writeRow([label, _formatNumber(amount), share]);
+  pw.Widget _buildPdfTable(List<List<String>> data, pw.Font font, pw.Font fontBold) {
+    return pw.TableHelper.fromTextArray(
+      headers: data[0],
+      data: data.sublist(1),
+      headerStyle: pw.TextStyle(font: fontBold, color: PdfColors.white),
+      headerDecoration: const pw.BoxDecoration(color: PdfColors.green900),
+      cellStyle: pw.TextStyle(font: font),
+      border: pw.TableBorder.all(color: PdfColors.grey300),
+      headerAlignment: pw.Alignment.centerLeft,
+      cellAlignment: pw.Alignment.centerLeft,
+    );
   }
 
-  String _formatNumber(double value) {
-    return value.toStringAsFixed(2);
+  String _percent(double val, double total) {
+    if (total == 0) return '0%';
+    return '${(val / total * 100).toStringAsFixed(1)}%';
   }
 
   String _escapeCsvCell(String value) {
@@ -109,20 +148,5 @@ class ReportExportService {
       return '"${value.replaceAll('"', '""')}"';
     }
     return value;
-  }
-
-  String _productLabel(String key) {
-    switch (key) {
-      case ProductTypes.eggs:
-        return 'Яйца';
-      case ProductTypes.meat:
-        return 'Мясо';
-      case ProductTypes.milk:
-        return 'Молоко';
-      case ProductTypes.liveAnimals:
-        return 'Живой вес / молодняк';
-      default:
-        return ProductTypes.labelFor(key);
-    }
   }
 }

@@ -1,10 +1,11 @@
 import 'package:equatable/equatable.dart';
-import 'package:agroledger/features/calculator/data/models/json_numeric.dart';
+import 'calculator_enums.dart';
+import 'json_numeric.dart';
 
 class LivestockYieldModel extends Equatable {
   final int? id;
   final int assetId;
-  final String productType;
+  final ProductSubType productSubType;
   final double volume;
   final double earnings;
   final DateTime date;
@@ -12,7 +13,7 @@ class LivestockYieldModel extends Equatable {
   const LivestockYieldModel({
     this.id,
     required this.assetId,
-    required this.productType,
+    required this.productSubType,
     required this.volume,
     required this.earnings,
     required this.date,
@@ -20,54 +21,23 @@ class LivestockYieldModel extends Equatable {
 
   factory LivestockYieldModel.fromJson(Map<String, dynamic> json) {
     return LivestockYieldModel(
-      id: json['id'] != null ? parseJsonInt(json['id']) : null,
-      assetId: parseJsonInt(json['asset_id']),
-      productType: json['product_type']?.toString() ?? '',
+      id: json['id'],
+      assetId: json['asset_id'],
+      productSubType: ProductSubType.fromString(json['product_sub_type']),
       volume: parseJsonNumeric(json['volume']),
       earnings: parseJsonNumeric(json['earnings']),
-      date: DateTime.parse(json['date'].toString()),
+      date: DateTime.parse(json['date']),
     );
   }
 
-  Map<String, dynamic> toJson() {
-    return {
-      if (id != null) 'id': id,
-      'asset_id': assetId,
-      'product_type': productType,
-      'volume': volume,
-      'earnings': earnings,
-      'date': date.toIso8601String(),
-    };
-  }
-
-  Map<String, dynamic> toCreateJson() {
-    return {
-      'asset_id': assetId,
-      'product_type': productType,
-      'volume': volume,
-      'earnings': earnings,
-      'date': date.toIso8601String(),
-    };
-  }
-
-  LivestockYieldModel copyWith({
-    int? id,
-    int? assetId,
-    String? productType,
-    double? volume,
-    double? earnings,
-    DateTime? date,
-  }) {
-    return LivestockYieldModel(
-      id: id ?? this.id,
-      assetId: assetId ?? this.assetId,
-      productType: productType ?? this.productType,
-      volume: volume ?? this.volume,
-      earnings: earnings ?? this.earnings,
-      date: date ?? this.date,
-    );
-  }
+  Map<String, dynamic> toJson() => {
+        'asset_id': assetId,
+        'product_sub_type': productSubType.name,
+        'volume': volume,
+        'earnings': earnings,
+        'date': date.toIso8601String(),
+      };
 
   @override
-  List<Object?> get props => [id, assetId, productType, volume, earnings, date];
+  List<Object?> get props => [id, assetId, productSubType, volume, earnings, date];
 }

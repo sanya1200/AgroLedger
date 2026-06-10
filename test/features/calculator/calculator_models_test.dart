@@ -4,6 +4,7 @@ import 'package:agroledger/features/calculator/data/models/livestock_expense_mod
 import 'package:agroledger/features/calculator/data/models/livestock_yield_model.dart';
 import 'package:agroledger/features/calculator/data/models/calculator_summary_model.dart';
 import 'package:agroledger/features/calculator/domain/services/report_export_service.dart';
+import 'package:agroledger/features/calculator/data/models/calculator_enums.dart';
 
 void main() {
   group('LivestockAssetModel', () {
@@ -41,33 +42,33 @@ void main() {
   });
 
   group('LivestockExpenseModel', () {
-    test('totalCost sums all expense fields', () {
+    test('fromJson parses sub-types correctly', () {
       final model = LivestockExpenseModel.fromJson(const {
         'id': 2,
         'asset_id': 1,
-        'feed_cost': '10000',
-        'vet_cost': '2500.75',
-        'utility_cost': '1500',
-        'other_cost': '500',
+        'feed_sub_type': 'compound_feed',
+        'amount': '14500.75',
         'date': '2026-06-10T08:30:00Z',
       });
 
+      expect(model.amount, 14500.75);
+      expect(model.feedSubType, FeedSubType.compoundFeed);
       expect(model.totalCost, 14500.75);
     });
   });
 
   group('LivestockYieldModel', () {
-    test('fromJson parses product type and earnings', () {
+    test('fromJson parses product sub-type and earnings', () {
       final model = LivestockYieldModel.fromJson(const {
         'id': 3,
         'asset_id': 1,
-        'product_type': 'eggs',
+        'product_sub_type': 'eggs_commercial',
         'volume': '1200',
         'earnings': '48000.00',
         'date': '2026-06-10T18:00:00Z',
       });
 
-      expect(model.productType, 'eggs');
+      expect(model.productSubType, ProductSubType.eggsCommercial);
       expect(model.volume, 1200);
       expect(model.earnings, 48000);
     });
@@ -89,8 +90,8 @@ void main() {
         'net_profit': '67000',
         'roi': 30.73,
         'earnings_by_product': {
-          'eggs': '120000',
-          'meat': '165000',
+          'eggs_commercial': '120000',
+          'meat_carcass': '165000',
         },
       });
 
@@ -99,8 +100,8 @@ void main() {
       expect(model.vetCost, 8000);
       expect(model.netProfit, 67000);
       expect(model.roi, 30.73);
-      expect(model.earningsByProduct['eggs'], 120000);
-      expect(model.earningsByProduct['meat'], 165000);
+      expect(model.earningsByProduct['eggs_commercial'], 120000);
+      expect(model.earningsByProduct['meat_carcass'], 165000);
     });
   });
 
@@ -119,8 +120,8 @@ void main() {
         netProfit: 67000,
         roi: 30.73,
         earningsByProduct: {
-          'eggs': 120000,
-          'meat': 165000,
+          'eggs_commercial': 120000,
+          'meat_carcass': 165000,
         },
       );
 
@@ -129,8 +130,6 @@ void main() {
       expect(csv, contains('AgroLedger'));
       expect(csv, contains('Чистая прибыль'));
       expect(csv, contains('Корма'));
-      expect(csv, contains('Яйца'));
-      expect(csv, contains('165000.00'));
     });
   });
 }

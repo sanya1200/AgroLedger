@@ -1,16 +1,19 @@
 import 'package:agroledger/core/network/dio_client.dart';
-import 'package:agroledger/features/calculator/data/models/calculation_cycle_model.dart';
-import 'package:agroledger/features/calculator/data/models/expense_model.dart';
-import 'package:agroledger/features/calculator/data/models/income_model.dart';
-import 'package:agroledger/features/calculator/data/models/cycle_analytics_model.dart';
+import 'package:agroledger/features/calculator/data/models/livestock_asset_model.dart';
+import 'package:agroledger/features/calculator/data/models/calculator_summary_model.dart';
+import 'package:agroledger/features/calculator/data/models/predictive_forecast_model.dart';
+
+class FreeLimitException implements Exception {}
+class PremiumRequiredException implements Exception {}
 
 abstract class CalculatorRemoteDataSource {
-  Future<List<CalculationCycleModel>> getCycles();
-  Future<CalculationCycleModel> createCycle(String name, String animalType);
-  Future<ExpenseModel> addExpense(int cycleId, String category, double amount, String? description);
-  Future<IncomeModel> addIncome(int cycleId, String productName, double quantity, double amount);
-  Future<CycleAnalyticsModel> getAnalytics(int cycleId);
-  Future<CalculationCycleModel> closeCycle(int cycleId);
+  Future<List<LivestockAssetModel>> getAssets();
+  Future<LivestockAssetModel> createAsset(Map<String, dynamic> assetData);
+  Future<void> addExpense(Map<String, dynamic> expenseData);
+  Future<void> addYield(Map<String, dynamic> yieldData);
+  Future<CalculatorSummaryModel> getSummary({int? assetId});
+  Future<PredictiveForecastModel> getPredictiveForecast(int assetId);
+  Future<void> activatePremiumDebug();
 }
 
 class CalculatorRemoteDataSourceImpl implements CalculatorRemoteDataSource {
@@ -22,59 +25,64 @@ class CalculatorRemoteDataSourceImpl implements CalculatorRemoteDataSource {
     if (responseData is Map && responseData['success'] == true) {
       return responseData['data'];
     }
-    throw responseData?['error'] ?? 'Ошибка сервера';
+    final error = responseData?['error'];
+    if (error == 'FREE_LIMIT_REACHED') throw FreeLimitException();
+    if (error == 'PREMIUM_REQUIRED') throw PremiumRequiredException();
+    
+    throw error ?? 'Ошибка сервера';
   }
 
   @override
-  Future<List<CalculationCycleModel>> getCycles() async {
-    final response = await _client.dio.get('calculator/cycles');
+  Future<List<LivestockAssetModel>> getAssets() async {
+    final response = await _client.dio.get('calculator/assets');
     final data = _unwrap(response.data);
-    return (data as List).map((e) => CalculationCycleModel.fromJson(e)).toList();
+    return (data as List)
+        .map((e) => LivestockAssetModel.fromJson(Map<String, dynamic>.from(e)))
+        .toList();
   }
 
   @override
-  Future<CalculationCycleModel> createCycle(String name, String animalType) async {
-    final response = await _client.dio.post('calculator/cycles', data: {
-      'name': name,
-      'animal_type': animalType,
-    });
+  Future<LivestockAssetModel> createAsset(Map<String, dynamic> assetData) async {
+    final response = await _client.dio.post('calculator/assets', data: assetData);
     final data = _unwrap(response.data);
-    return CalculationCycleModel.fromJson(data);
+    return LivestockAssetModel.fromJson(Map<String, dynamic>.from(data));
   }
 
   @override
-  Future<ExpenseModel> addExpense(int cycleId, String category, double amount, String? description) async {
-    final response = await _client.dio.post('calculator/cycles/$cycleId/expenses', data: {
-      'category': category,
-      'amount': amount,
-      'description': description,
-    });
-    final data = _unwrap(response.data);
-    return ExpenseModel.fromJson(data);
+  Future<void> addExpense(Map<String, dynamic> expenseData) async {
+    final response = await _client.dio.post('calculator/expenses', data: expenseData);
+    _unwrap(response.data);
   }
 
   @override
-  Future<IncomeModel> addIncome(int cycleId, String productName, double quantity, double amount) async {
-    final response = await _client.dio.post('calculator/cycles/$cycleId/incomes', data: {
-      'product_name': productName,
-      'quantity': quantity,
-      'amount': amount,
-    });
-    final data = _unwrap(response.data);
-    return IncomeModel.fromJson(data);
+  Future<void> addYield(Map<String, dynamic> yieldData) async {
+    final response = await _client.dio.post('calculator/yields', data: yieldData);
+    _unwrap(response.data);
   }
 
   @override
-  Future<CycleAnalyticsModel> getAnalytics(int cycleId) async {
-    final response = await _client.dio.get('calculator/cycles/$cycleId/analytics');
+  Future<CalculatorSummaryModel> getSummary({int? assetId}) async {
+    final response = await _client.dio.get(
+      'calculator/summary',
+      queryParameters: assetId != null ? {'asset_id': assetId} : null,
+    );
     final data = _unwrap(response.data);
-    return CycleAnalyticsModel.fromJson(data);
+    return CalculatorSummaryModel.fromJson(Map<String, dynamic>.from(data));
   }
 
   @override
-  Future<CalculationCycleModel> closeCycle(int cycleId) async {
-    final response = await _client.dio.put('calculator/cycles/$cycleId/close');
+  Future<PredictiveForecastModel> getPredictiveForecast(int assetId) async {
+    final response = await _client.dio.get(
+      'calculator/predictive-forecast',
+      queryParameters: {'asset_id': assetId},
+    );
     final data = _unwrap(response.data);
-    return CalculationCycleModel.fromJson(data);
+    return PredictiveForecastModel.fromJson(Map<String, dynamic>.from(data));
+  }
+
+  @override
+  Future<void> activatePremiumDebug() async {
+    final response = await _client.dio.post('auth/activate-premium');
+    _unwrap(response.data);
   }
 }

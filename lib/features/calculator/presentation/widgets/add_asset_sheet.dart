@@ -5,8 +5,6 @@ import 'package:agroledger/core/theme/app_text_styles.dart';
 import 'package:agroledger/features/auth/presentation/widgets/animated_input_field.dart';
 import 'package:agroledger/features/calculator/data/models/livestock_asset_model.dart';
 import 'package:agroledger/features/calculator/presentation/bloc/calculator_bloc.dart';
-import 'package:agroledger/features/calculator/presentation/bloc/calculator_event.dart';
-import 'package:agroledger/features/calculator/presentation/bloc/calculator_state.dart';
 import 'package:agroledger/features/calculator/presentation/widgets/calculator_sheet_widgets.dart';
 import 'package:agroledger/features/calculator/presentation/widgets/category_selector_card.dart';
 
@@ -86,7 +84,7 @@ class _AddAssetSheetState extends State<AddAssetSheet> {
         ),
         decoration: const BoxDecoration(
           color: AppColors.creamBackground,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
         ),
         child: SafeArea(
           top: false,
@@ -96,28 +94,37 @@ class _AddAssetSheetState extends State<AddAssetSheet> {
               const CalculatorSheetHandle(),
               Flexible(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+                  padding: const EdgeInsets.fromLTRB(28, 8, 28, 32),
                   child: Form(
                     key: _formKey,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Новая группа поголовья', style: AppTextStyles.h2),
+                        Row(
+                          children: [
+                            Text('Новая группа', style: AppTextStyles.h1.copyWith(fontSize: 24)),
+                            const Spacer(),
+                            IconButton(
+                              onPressed: () => Navigator.pop(context),
+                              icon: const Icon(Icons.close_rounded, color: AppColors.textLight),
+                            ),
+                          ],
+                        ),
                         const SizedBox(height: 24),
-                        Text('Выберите категорию', style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 12),
+                        Text('Категория хозяйства', style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold, color: AppColors.sageDark)),
+                        const SizedBox(height: 14),
                         CategorySelectorCard(
                           selectedCategory: _selectedCategory,
                           onCategorySelected: (val) => setState(() => _selectedCategory = val),
                         ),
-                        const SizedBox(height: 24),
+                        const SizedBox(height: 32),
                         AnimatedInputField(
                           controller: _breedController,
-                          label: 'Порода / Название группы',
+                          label: 'Порода или название группы',
                           prefixIcon: Icons.badge_outlined,
                           validator: (v) => v!.isEmpty ? 'Введите название' : null,
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 20),
                         Row(
                           children: [
                             Expanded(
@@ -125,7 +132,7 @@ class _AddAssetSheetState extends State<AddAssetSheet> {
                                 controller: _quantityController,
                                 label: 'Количество',
                                 prefixIcon: Icons.numbers_rounded,
-                                keyboardType: TextInputType.number,
+                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
                                 validator: validateRequiredDouble,
                               ),
                             ),
@@ -133,22 +140,36 @@ class _AddAssetSheetState extends State<AddAssetSheet> {
                             Expanded(
                               child: AnimatedInputField(
                                 controller: _costController,
-                                label: 'Стоимость закуп.',
+                                label: 'Цена закупа (₸)',
                                 prefixIcon: Icons.payments_outlined,
-                                keyboardType: TextInputType.number,
+                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
                                 validator: validateRequiredDouble,
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 32),
+                        const SizedBox(height: 40),
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
                             onPressed: _isSubmitting ? null : _submit,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.sagePrimary,
+                              foregroundColor: Colors.white,
+                              minimumSize: const Size.fromHeight(64),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                              elevation: 0,
+                            ),
                             child: _isSubmitting
-                                ? const CircularProgressIndicator(color: Colors.white)
-                                : const Text('Создать группу'),
+                                ? const CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
+                                : const Text('Создать учетную группу', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Center(
+                          child: Text(
+                            'Данные будут использоваться для расчета ROI',
+                            style: AppTextStyles.caption.copyWith(color: AppColors.textLight),
                           ),
                         ),
                       ],

@@ -6,9 +6,8 @@ import 'package:agroledger/features/auth/presentation/widgets/animated_input_fie
 import 'package:agroledger/features/calculator/data/models/livestock_asset_model.dart';
 import 'package:agroledger/features/calculator/data/models/livestock_yield_model.dart';
 import 'package:agroledger/features/calculator/presentation/bloc/calculator_bloc.dart';
-import 'package:agroledger/features/calculator/presentation/bloc/calculator_event.dart';
-import 'package:agroledger/features/calculator/presentation/bloc/calculator_state.dart';
 import 'package:agroledger/features/calculator/presentation/widgets/calculator_sheet_widgets.dart';
+import 'package:agroledger/features/calculator/data/models/calculator_enums.dart';
 
 class AddYieldSheet extends StatefulWidget {
   final List<LivestockAssetModel> assets;
@@ -51,7 +50,7 @@ class _AddYieldSheetState extends State<AddYieldSheet> {
   final _earningsController = TextEditingController();
 
   int? _selectedAssetId;
-  String? _selectedProductType;
+  ProductSubType? _selectedProductType;
   bool _isSubmitting = false;
   String? _assetError;
 
@@ -106,31 +105,18 @@ class _AddYieldSheetState extends State<AddYieldSheet> {
 
   void _submit() {
     setState(() => _assetError = null);
-
     if (_selectedAssetId == null) {
       setState(() => _assetError = 'Выберите группу поголовья');
       return;
     }
-
-    if (_selectedProductType == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Выберите тип продукции'),
-          backgroundColor: AppColors.errorSoft,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        ),
-      );
-      return;
-    }
-
+    if (_selectedProductType == null) return;
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isSubmitting = true);
 
     final yieldData = LivestockYieldModel(
       assetId: _selectedAssetId!,
-      productType: _selectedProductType!,
+      productSubType: _selectedProductType!,
       volume: parseFormDouble(_volumeController.text) ?? 0,
       earnings: parseFormDouble(_earningsController.text) ?? 0,
       date: DateTime.now().toUtc(),
@@ -149,24 +135,11 @@ class _AddYieldSheetState extends State<AddYieldSheet> {
   @override
   Widget build(BuildContext context) {
     return BlocListener<CalculatorBloc, CalculatorState>(
-      listenWhen: (previous, current) =>
-          current is CalculatorActionSuccess ||
-          current is CalculatorError,
       listener: (context, state) {
         if (state is CalculatorActionSuccess && _isSubmitting) {
           Navigator.of(context).pop();
         } else if (state is CalculatorError && _isSubmitting) {
           setState(() => _isSubmitting = false);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.message),
-              backgroundColor: AppColors.errorSoft,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-            ),
-          );
         }
       },
       child: Container(
@@ -175,7 +148,7 @@ class _AddYieldSheetState extends State<AddYieldSheet> {
         ),
         decoration: const BoxDecoration(
           color: AppColors.creamBackground,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
         ),
         child: SafeArea(
           top: false,
@@ -185,8 +158,7 @@ class _AddYieldSheetState extends State<AddYieldSheet> {
               const CalculatorSheetHandle(),
               Flexible(
                 child: SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+                  padding: const EdgeInsets.fromLTRB(28, 8, 28, 32),
                   child: Form(
                     key: _formKey,
                     child: Column(
@@ -194,39 +166,11 @@ class _AddYieldSheetState extends State<AddYieldSheet> {
                       children: [
                         Row(
                           children: [
-                            Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: AppColors.accentGold.withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                              child: const Icon(
-                                Icons.payments_outlined,
-                                color: AppColors.accentGold,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Зафиксировать доход',
-                                    style: AppTextStyles.h2.copyWith(fontSize: 20),
-                                  ),
-                                  Text(
-                                    'Продажа продукции и молодняка',
-                                    style: AppTextStyles.caption,
-                                  ),
-                                ],
-                              ),
-                            ),
+                            Text('Записать доход', style: AppTextStyles.h1.copyWith(fontSize: 24, color: AppColors.sageDark)),
+                            const Spacer(),
                             IconButton(
-                              onPressed: _isSubmitting
-                                  ? null
-                                  : () => Navigator.of(context).pop(),
-                              icon: const Icon(Icons.close_rounded),
-                              color: AppColors.textLight,
+                              onPressed: () => Navigator.pop(context),
+                              icon: const Icon(Icons.close_rounded, color: AppColors.textLight),
                             ),
                           ],
                         ),
@@ -235,139 +179,45 @@ class _AddYieldSheetState extends State<AddYieldSheet> {
                           assets: widget.assets,
                           selectedAssetId: _selectedAssetId,
                           errorText: _assetError,
-                          onChanged: (value) {
-                            if (_isSubmitting) return;
-                            _onAssetChanged(value);
-                          },
+                          onChanged: _onAssetChanged,
                         ),
-                        const SizedBox(height: 24),
-                        Text(
-                          'Тип продукции',
-                          style: AppTextStyles.bodyMedium.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.sageDark,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 280),
-                          child: _productOptions.isEmpty
-                              ? Text(
-                                  'Сначала выберите группу',
-                                  key: const ValueKey('empty_products'),
-                                  style: AppTextStyles.caption,
-                                )
-                              : Wrap(
-                                  key: ValueKey(_selectedAssetId),
-                                  spacing: 10,
-                                  runSpacing: 10,
-                                  children: _productOptions.map((option) {
-                                    final isSelected =
-                                        _selectedProductType == option.value;
-                                    return GestureDetector(
-                                      onTap: _isSubmitting
-                                          ? null
-                                          : () => setState(
-                                                () => _selectedProductType =
-                                                    option.value,
-                                              ),
-                                      child: AnimatedContainer(
-                                        duration:
-                                            const Duration(milliseconds: 220),
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 16,
-                                          vertical: 12,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: isSelected
-                                              ? AppColors.accentGold
-                                                  .withValues(alpha: 0.15)
-                                              : AppColors.creamSurface,
-                                          borderRadius:
-                                              BorderRadius.circular(20),
-                                          border: Border.all(
-                                            color: isSelected
-                                                ? AppColors.accentGold
-                                                : AppColors.sageLight
-                                                    .withValues(alpha: 0.25),
-                                            width: isSelected ? 2 : 1,
-                                          ),
-                                        ),
-                                        child: Text(
-                                          option.label,
-                                          style: AppTextStyles.bodyMedium
-                                              .copyWith(
-                                            fontWeight: isSelected
-                                                ? FontWeight.bold
-                                                : FontWeight.normal,
-                                            color: isSelected
-                                                ? AppColors.sageDark
-                                                : AppColors.textDark,
-                                          ),
-                                        ),
-                                      ),
-                                    );
-                                  }).toList(),
-                                ),
-                        ),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 28),
+                        Text('Реализованная продукция', style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold, color: AppColors.sageDark)),
+                        const SizedBox(height: 14),
+                        _buildProductChips(),
+                        const SizedBox(height: 28),
                         AnimatedInputField(
                           controller: _volumeController,
                           label: 'Объём реализации ($_volumeUnit)',
                           prefixIcon: Icons.scale_outlined,
-                          keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true,
-                          ),
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
                           validator: validateRequiredDouble,
                         ),
                         const SizedBox(height: 16),
                         AnimatedInputField(
                           controller: _earningsController,
-                          label: 'Полученный доход (₸)',
+                          label: 'Полученная выручка (₸)',
                           prefixIcon: Icons.account_balance_wallet_outlined,
-                          keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true,
-                          ),
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
                           validator: validateRequiredDouble,
                         ),
-                        const SizedBox(height: 24),
+                        const SizedBox(height: 40),
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
-                            onPressed: _isSubmitting || widget.assets.isEmpty
-                                ? null
-                                : _submit,
+                            onPressed: _isSubmitting || widget.assets.isEmpty ? null : _submit,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.accentGold,
                               foregroundColor: Colors.white,
-                              minimumSize: const Size.fromHeight(56),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(20),
-                              ),
+                              minimumSize: const Size.fromHeight(64),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                              elevation: 0,
                             ),
                             child: _isSubmitting
-                                ? const SizedBox(
-                                    height: 24,
-                                    width: 24,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2.5,
-                                      color: Colors.white,
-                                    ),
-                                  )
-                                : const Text('Зафиксировать доход'),
+                                ? const CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
+                                : const Text('Зафиксировать прибыль', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                           ),
                         ),
-                        if (widget.assets.isEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 12),
-                            child: Text(
-                              'Сначала добавьте группу поголовья',
-                              textAlign: TextAlign.center,
-                              style: AppTextStyles.caption.copyWith(
-                                color: AppColors.errorSoft,
-                              ),
-                            ),
-                          ),
                       ],
                     ),
                   ),
@@ -375,6 +225,53 @@ class _AddYieldSheetState extends State<AddYieldSheet> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProductChips() {
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 300),
+      child: Container(
+        key: ValueKey(_selectedAssetId),
+        height: 54,
+        child: ListView.builder(
+          scrollDirection: Axis.horizontal,
+          physics: const BouncingScrollPhysics(),
+          itemCount: _productOptions.length,
+          itemBuilder: (context, index) {
+            final option = _productOptions[index];
+            final isSelected = _selectedProductType == option.value;
+            return Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: ChoiceChip(
+                label: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(option.label, style: TextStyle(
+                      color: isSelected ? Colors.white : AppColors.sageDark,
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    )),
+                    Text(option.unit, style: TextStyle(
+                      fontSize: 10,
+                      color: isSelected ? Colors.white.withValues(alpha: 0.8) : AppColors.textLight,
+                    )),
+                  ],
+                ),
+                selected: isSelected,
+                onSelected: (val) => setState(() => _selectedProductType = option.value),
+                selectedColor: AppColors.sagePrimary,
+                backgroundColor: AppColors.creamSurface,
+                showCheckmark: false,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: BorderSide(color: isSelected ? AppColors.sagePrimary : AppColors.sageLight.withValues(alpha: 0.15)),
+                ),
+              ),
+            );
+          },
         ),
       ),
     );

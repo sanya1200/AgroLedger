@@ -4,11 +4,10 @@ from jose import jwt, JWTError
 from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.database import get_db
-from app.core.security import pwd_context
 from app.models.user import User
 from app.schemas.token import TokenData
 
-# Указываем путь, по которому клиент будет получать токен
+# OAuth2 scheme
 oauth2_scheme = OAuth2PasswordBearer(
     tokenUrl=f"{settings.API_V1_STR}/auth/signin"
 )
@@ -19,8 +18,7 @@ def get_current_user(
     token: str = Depends(oauth2_scheme)
 ) -> User:
     """
-    Зависимость для получения текущего авторизованного пользователя.
-    Декодирует JWT, проверяет существование пользователя в БД.
+    Dependency to get the current authorized user.
     """
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -46,3 +44,15 @@ def get_current_user(
         raise credentials_exception
 
     return user
+
+
+def check_premium_status(current_user: User = Depends(get_current_user)) -> User:
+    """
+    Dependency to check if the user has an active premium subscription.
+    """
+    if not current_user.premium_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="PREMIUM_REQUIRED"
+        )
+    return current_user

@@ -1,90 +1,75 @@
 import 'package:equatable/equatable.dart';
-import 'package:agroledger/features/calculator/data/models/json_numeric.dart';
+import 'calculator_enums.dart';
+import 'json_numeric.dart';
 
 class LivestockExpenseModel extends Equatable {
   final int? id;
   final int assetId;
-  final double feedCost;
-  final double vetCost;
-  final double utilityCost;
-  final double otherCost;
+  final FeedSubType? feedSubType;
+  final VetSubType? vetSubType;
+  final UtilitySubType? utilitySubType;
+  final OtherSubType? otherSubType;
+  final double amount;
+  final String? description;
   final DateTime date;
 
   const LivestockExpenseModel({
     this.id,
     required this.assetId,
-    required this.feedCost,
-    required this.vetCost,
-    required this.utilityCost,
-    required this.otherCost,
+    this.feedSubType,
+    this.vetSubType,
+    this.utilitySubType,
+    this.otherSubType,
+    required this.amount,
+    this.description,
     required this.date,
   });
 
-  double get totalCost => feedCost + vetCost + utilityCost + otherCost;
-
   factory LivestockExpenseModel.fromJson(Map<String, dynamic> json) {
     return LivestockExpenseModel(
-      id: json['id'] != null ? parseJsonInt(json['id']) : null,
-      assetId: parseJsonInt(json['asset_id']),
-      feedCost: parseJsonNumeric(json['feed_cost']),
-      vetCost: parseJsonNumeric(json['vet_cost']),
-      utilityCost: parseJsonNumeric(json['utility_cost']),
-      otherCost: parseJsonNumeric(json['other_cost']),
-      date: DateTime.parse(json['date'].toString()),
+      id: json['id'],
+      assetId: json['asset_id'],
+      feedSubType: json['feed_sub_type'] != null
+          ? FeedSubType.fromString(json['feed_sub_type'])
+          : null,
+      vetSubType: json['vet_sub_type'] != null
+          ? VetSubType.fromString(json['vet_sub_type'])
+          : null,
+      utilitySubType: json['utility_sub_type'] != null
+          ? UtilitySubType.fromString(json['utility_sub_type'])
+          : null,
+      otherSubType: json['other_sub_type'] != null
+          ? OtherSubType.fromString(json['other_sub_type'])
+          : null,
+      amount: parseJsonNumeric(json['amount']),
+      description: json['description'],
+      date: DateTime.parse(json['date']),
     );
   }
 
-  Map<String, dynamic> toJson() {
-    return {
-      if (id != null) 'id': id,
-      'asset_id': assetId,
-      'feed_cost': feedCost,
-      'vet_cost': vetCost,
-      'utility_cost': utilityCost,
-      'other_cost': otherCost,
-      'date': date.toIso8601String(),
-    };
-  }
-
-  Map<String, dynamic> toCreateJson() {
-    return {
-      'asset_id': assetId,
-      'feed_cost': feedCost,
-      'vet_cost': vetCost,
-      'utility_cost': utilityCost,
-      'other_cost': otherCost,
-      'date': date.toIso8601String(),
-    };
-  }
-
-  LivestockExpenseModel copyWith({
-    int? id,
-    int? assetId,
-    double? feedCost,
-    double? vetCost,
-    double? utilityCost,
-    double? otherCost,
-    DateTime? date,
-  }) {
-    return LivestockExpenseModel(
-      id: id ?? this.id,
-      assetId: assetId ?? this.assetId,
-      feedCost: feedCost ?? this.feedCost,
-      vetCost: vetCost ?? this.vetCost,
-      utilityCost: utilityCost ?? this.utilityCost,
-      otherCost: otherCost ?? this.otherCost,
-      date: date ?? this.date,
-    );
-  }
+  Map<String, dynamic> toJson() => {
+        'asset_id': assetId,
+        if (feedSubType != null) 'feed_sub_type': feedSubType!.name,
+        if (vetSubType != null) 'vet_sub_type': vetSubType!.name,
+        if (utilitySubType != null) 'utility_sub_type': utilitySubType!.name,
+        if (otherSubType != null) 'other_sub_type': otherSubType!.name,
+        'amount': amount,
+        if (description != null) 'description': description,
+        'date': date.toIso8601String(),
+      };
 
   @override
   List<Object?> get props => [
         id,
         assetId,
-        feedCost,
-        vetCost,
-        utilityCost,
-        otherCost,
-        date,
+        feedSubType,
+        vetSubType,
+        utilitySubType,
+        otherSubType,
+        amount,
+        description,
+        date
       ];
+
+  double get totalCost => amount;
 }

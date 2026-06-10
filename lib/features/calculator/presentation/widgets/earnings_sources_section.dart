@@ -3,7 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:agroledger/core/theme/app_colors.dart';
 import 'package:agroledger/core/theme/app_text_styles.dart';
 import 'package:agroledger/core/presentation/widgets/soft_card.dart';
-import 'package:agroledger/features/calculator/presentation/widgets/calculator_sheet_widgets.dart';
+import 'package:agroledger/features/calculator/data/models/calculator_enums.dart';
 
 class EarningsSourcesSection extends StatelessWidget {
   final Map<String, double> earningsByProduct;
@@ -62,9 +62,10 @@ class EarningsSourcesSection extends StatelessWidget {
             spacing: 10,
             runSpacing: 10,
             children: entries.map((entry) {
+              final subType = ProductSubType.fromString(entry.key);
               return _EarningsTag(
-                label: _productLabel(entry.key),
-                icon: _productIcon(entry.key),
+                label: _productLabel(subType),
+                icon: _productIcon(subType),
                 amount: '${currencyFormat.format(entry.value)} ₸',
               );
             }).toList(),
@@ -74,30 +75,37 @@ class EarningsSourcesSection extends StatelessWidget {
     );
   }
 
-  String _productLabel(String key) {
-    switch (key) {
-      case ProductTypes.eggs:
-        return 'Яйца';
-      case ProductTypes.meat:
-        return 'Мясо';
-      case ProductTypes.milk:
-        return 'Молоко';
-      case ProductTypes.liveAnimals:
-        return 'Живой вес';
-      default:
-        return ProductTypes.labelFor(key);
+  String _productLabel(ProductSubType type) {
+    switch (type) {
+      case ProductSubType.milk: return 'Молоко';
+      case ProductSubType.eggsCommercial: return 'Яйцо тов.';
+      case ProductSubType.eggsIncubation: return 'Яйцо инк.';
+      case ProductSubType.meatCarcass: return 'Мясо';
+      case ProductSubType.kumys: return 'Кумыс';
+      case ProductSubType.shubat: return 'Шубат';
+      case ProductSubType.honey: return 'Мед';
+      case ProductSubType.wool: return 'Шерсть';
+      case ProductSubType.liveWeight: return 'Живой вес';
+      case ProductSubType.youngStock: return 'Молодняк';
+      default: return 'Прочее';
     }
   }
 
-  IconData _productIcon(String key) {
-    switch (key) {
-      case ProductTypes.eggs:
-        return Icons.egg_outlined;
-      case ProductTypes.meat:
-        return Icons.set_meal_outlined;
-      case ProductTypes.milk:
+  IconData _productIcon(ProductSubType type) {
+    switch (type) {
+      case ProductSubType.milk:
+      case ProductSubType.shubat:
+      case ProductSubType.kumys:
         return Icons.water_drop_outlined;
-      case ProductTypes.liveAnimals:
+      case ProductSubType.eggsCommercial:
+      case ProductSubType.eggsIncubation:
+        return Icons.egg_outlined;
+      case ProductSubType.meatCarcass:
+        return Icons.restaurant_menu_rounded;
+      case ProductSubType.honey:
+        return Icons.hive_outlined;
+      case ProductSubType.youngStock:
+      case ProductSubType.liveWeight:
         return Icons.pets_outlined;
       default:
         return Icons.payments_outlined;

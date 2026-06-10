@@ -1,8 +1,11 @@
 from datetime import datetime
 from decimal import Decimal
-from typing import Optional, Dict
+from typing import Optional, Dict, List
 from pydantic import BaseModel, ConfigDict, Field
-from app.models.calculator import LivestockCategory, ProductType
+from app.models.calculator import (
+    LivestockCategory, ProductSubType, FeedSubType,
+    VetSubType, UtilitySubType, OtherSubType
+)
 
 
 class AssetCreate(BaseModel):
@@ -33,18 +36,22 @@ class AssetResponse(BaseModel):
 
 class ExpenseCreate(BaseModel):
     asset_id: int = Field(..., gt=0)
-    feed_cost: Decimal = Field(default=Decimal("0"), ge=0)
-    vet_cost: Decimal = Field(default=Decimal("0"), ge=0)
-    utility_cost: Decimal = Field(default=Decimal("0"), ge=0)
-    other_cost: Decimal = Field(default=Decimal("0"), ge=0)
+    feed_sub_type: Optional[FeedSubType] = None
+    vet_sub_type: Optional[VetSubType] = None
+    utility_sub_type: Optional[UtilitySubType] = None
+    other_sub_type: Optional[OtherSubType] = None
+    amount: Decimal = Field(..., gt=0)
+    description: Optional[str] = None
     date: datetime
 
 
 class ExpenseUpdate(BaseModel):
-    feed_cost: Optional[Decimal] = Field(None, ge=0)
-    vet_cost: Optional[Decimal] = Field(None, ge=0)
-    utility_cost: Optional[Decimal] = Field(None, ge=0)
-    other_cost: Optional[Decimal] = Field(None, ge=0)
+    feed_sub_type: Optional[FeedSubType] = None
+    vet_sub_type: Optional[VetSubType] = None
+    utility_sub_type: Optional[UtilitySubType] = None
+    other_sub_type: Optional[OtherSubType] = None
+    amount: Optional[Decimal] = Field(None, ge=0)
+    description: Optional[str] = None
     date: Optional[datetime] = None
 
 
@@ -53,27 +60,25 @@ class ExpenseResponse(BaseModel):
 
     id: int
     asset_id: int
-    feed_cost: Decimal
-    vet_cost: Decimal
-    utility_cost: Decimal
-    other_cost: Decimal
+    feed_sub_type: Optional[FeedSubType] = None
+    vet_sub_type: Optional[VetSubType] = None
+    utility_sub_type: Optional[UtilitySubType] = None
+    other_sub_type: Optional[OtherSubType] = None
+    amount: Decimal
+    description: Optional[str] = None
     date: datetime
-
-    @property
-    def total_cost(self) -> Decimal:
-        return self.feed_cost + self.vet_cost + self.utility_cost + self.other_cost
 
 
 class YieldCreate(BaseModel):
     asset_id: int = Field(..., gt=0)
-    product_type: ProductType
-    volume: Decimal = Field(..., ge=0)
+    product_sub_type: ProductSubType
+    volume: Decimal = Field(..., gt=0)
     earnings: Decimal = Field(..., ge=0)
     date: datetime
 
 
 class YieldUpdate(BaseModel):
-    product_type: Optional[ProductType] = None
+    product_sub_type: Optional[ProductSubType] = None
     volume: Optional[Decimal] = Field(None, ge=0)
     earnings: Optional[Decimal] = Field(None, ge=0)
     date: Optional[datetime] = None
@@ -84,10 +89,20 @@ class YieldResponse(BaseModel):
 
     id: int
     asset_id: int
-    product_type: ProductType
+    product_sub_type: ProductSubType
     volume: Decimal
     earnings: Decimal
     date: datetime
+
+
+class PredictiveForecastResponse(BaseModel):
+    asset_id: int
+    category: LivestockCategory
+    fcr: Optional[float] = None  # Feed Conversion Ratio
+    break_even_date: Optional[datetime] = None
+    is_profitable: bool
+    estimated_monthly_profit: Decimal
+    advice: str
 
 
 class CalculatorSummaryResponse(BaseModel):

@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, Header, Request, status
+from datetime import datetime, timezone, timedelta
+from fastapi import APIRouter, Depends, Header, Request, status, HTTPException
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.dependencies import get_current_user
@@ -84,6 +85,17 @@ def update_settings(
     db.commit()
     db.refresh(user)
     return BaseResponse(data=UserDetailResponse.model_validate(user))
+
+@router.post("/activate-premium", response_model=BaseResponse[str])
+def activate_premium(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Simulation of premium purchase for 30 days."""
+    current_user.is_premium = True
+    current_user.premium_until = datetime.now(timezone.utc) + timedelta(days=30)
+    db.commit()
+    return BaseResponse(data="PREMIUM_ACTIVATED_FOR_30_DAYS")
 
 @router.delete("/delete-account", response_model=BaseResponse[str])
 def delete_account(

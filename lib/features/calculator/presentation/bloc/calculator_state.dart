@@ -1,6 +1,4 @@
-import 'package:equatable/equatable.dart';
-import 'package:agroledger/features/calculator/data/models/livestock_asset_model.dart';
-import 'package:agroledger/features/calculator/data/models/calculator_summary_model.dart';
+part of 'calculator_bloc.dart';
 
 abstract class CalculatorState extends Equatable {
   const CalculatorState();
@@ -21,27 +19,42 @@ class CalculatorSummaryLoaded extends CalculatorState {
   final CalculatorSummaryModel summary;
   final List<LivestockAssetModel> assets;
 
-  const CalculatorSummaryLoaded({
-    required this.summary,
-    required this.assets,
-  });
+  const CalculatorSummaryLoaded({required this.summary, required this.assets});
 
   @override
   List<Object?> get props => [summary, assets];
 }
 
+class PredictiveForecastLoadedState extends CalculatorState {
+  final PredictiveForecastModel forecast;
+  const PredictiveForecastLoadedState(this.forecast);
+
+  @override
+  List<Object?> get props => [forecast];
+}
+
 class CalculatorActionSuccess extends CalculatorState {
   final String message;
-
   const CalculatorActionSuccess({required this.message});
 
   @override
   List<Object?> get props => [message];
 }
 
+class CalculatorPremiumLockedState extends CalculatorState {
+  final String featureName;
+  const CalculatorPremiumLockedState(this.featureName);
+
+  @override
+  List<Object?> get props => [featureName];
+}
+
+class CalculatorFreeLimitReachedState extends CalculatorState {
+  const CalculatorFreeLimitReachedState();
+}
+
 class CalculatorError extends CalculatorState {
   final String message;
-
   const CalculatorError(this.message);
 
   @override

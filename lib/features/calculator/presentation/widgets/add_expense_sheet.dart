@@ -1,15 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:intl/intl.dart';
 import 'package:agroledger/core/theme/app_colors.dart';
 import 'package:agroledger/core/theme/app_text_styles.dart';
 import 'package:agroledger/features/auth/presentation/widgets/animated_input_field.dart';
 import 'package:agroledger/features/calculator/data/models/livestock_asset_model.dart';
 import 'package:agroledger/features/calculator/data/models/livestock_expense_model.dart';
 import 'package:agroledger/features/calculator/presentation/bloc/calculator_bloc.dart';
-import 'package:agroledger/features/calculator/presentation/bloc/calculator_event.dart';
-import 'package:agroledger/features/calculator/presentation/bloc/calculator_state.dart';
 import 'package:agroledger/features/calculator/presentation/widgets/calculator_sheet_widgets.dart';
+import 'package:agroledger/features/calculator/data/models/calculator_enums.dart';
 
 class AddExpenseSheet extends StatefulWidget {
   final List<LivestockAssetModel> assets;
@@ -48,15 +46,13 @@ class AddExpenseSheet extends StatefulWidget {
 
 class _AddExpenseSheetState extends State<AddExpenseSheet> {
   final _formKey = GlobalKey<FormState>();
-  final _feedController = TextEditingController();
-  final _vetController = TextEditingController();
-  final _utilityController = TextEditingController();
-  final _otherController = TextEditingController();
-
-  final _currencyFormat = NumberFormat('#,##0.##', 'ru_RU');
+  final _amountController = TextEditingController();
+  final _descController = TextEditingController();
 
   int? _selectedAssetId;
-  double _totalExpenses = 0;
+  String _mainCategory = 'feed'; // feed, vet, utility, other
+  dynamic _subCategory;
+
   bool _isSubmitting = false;
   String? _assetError;
 
@@ -67,68 +63,39 @@ class _AddExpenseSheetState extends State<AddExpenseSheet> {
     if (_selectedAssetId == null && widget.assets.length == 1) {
       _selectedAssetId = widget.assets.first.id;
     }
-    for (final controller in [
-      _feedController,
-      _vetController,
-      _utilityController,
-      _otherController,
-    ]) {
-      controller.addListener(_recalculateTotal);
-    }
+    _subCategory = FeedSubType.compoundFeed;
   }
 
-  @override
-  void dispose() {
-    _feedController.dispose();
-    _vetController.dispose();
-    _utilityController.dispose();
-    _otherController.dispose();
-    super.dispose();
-  }
-
-  void _recalculateTotal() {
-    final total = (parseFormDouble(_feedController.text) ?? 0) +
-        (parseFormDouble(_vetController.text) ?? 0) +
-        (parseFormDouble(_utilityController.text) ?? 0) +
-        (parseFormDouble(_otherController.text) ?? 0);
-    setState(() => _totalExpenses = total);
-  }
-
-  double _fieldValue(TextEditingController controller) {
-    return parseFormDouble(controller.text) ?? 0;
+  void _onMainCategoryChanged(String cat) {
+    setState(() {
+      _mainCategory = cat;
+      switch (cat) {
+        case 'feed': _subCategory = FeedSubType.compoundFeed; break;
+        case 'vet': _subCategory = VetSubType.vaccination; break;
+        case 'utility': _subCategory = UtilitySubType.electricityIncubation; break;
+        case 'other': _subCategory = OtherSubType.logistics; break;
+      }
+    });
   }
 
   void _submit() {
     setState(() => _assetError = null);
-
     if (_selectedAssetId == null) {
       setState(() => _assetError = 'Выберите группу поголовья');
       return;
     }
-
     if (!_formKey.currentState!.validate()) return;
-
-    final total = _totalExpenses;
-    if (total <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Укажите хотя бы одну статью расхода'),
-          backgroundColor: AppColors.errorSoft,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        ),
-      );
-      return;
-    }
 
     setState(() => _isSubmitting = true);
 
     final expense = LivestockExpenseModel(
       assetId: _selectedAssetId!,
-      feedCost: _fieldValue(_feedController),
-      vetCost: _fieldValue(_vetController),
-      utilityCost: _fieldValue(_utilityController),
-      otherCost: _fieldValue(_otherController),
+      feedSubType: _mainCategory == 'feed' ? _subCategory : null,
+      vetSubType: _mainCategory == 'vet' ? _subCategory : null,
+      utilitySubType: _mainCategory == 'utility' ? _subCategory : null,
+      otherSubType: _mainCategory == 'other' ? _subCategory : null,
+      amount: parseFormDouble(_amountController.text) ?? 0,
+      description: _descController.text.trim().isEmpty ? null : _descController.text.trim(),
       date: DateTime.now().toUtc(),
     );
 
@@ -136,25 +103,20 @@ class _AddExpenseSheetState extends State<AddExpenseSheet> {
   }
 
   @override
+  void dispose() {
+    _amountController.dispose();
+    _descController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return BlocListener<CalculatorBloc, CalculatorState>(
-      listenWhen: (previous, current) =>
-          current is CalculatorActionSuccess || current is CalculatorError,
       listener: (context, state) {
         if (state is CalculatorActionSuccess && _isSubmitting) {
           Navigator.of(context).pop();
         } else if (state is CalculatorError && _isSubmitting) {
           setState(() => _isSubmitting = false);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.message),
-              backgroundColor: AppColors.errorSoft,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-            ),
-          );
         }
       },
       child: Container(
@@ -163,7 +125,7 @@ class _AddExpenseSheetState extends State<AddExpenseSheet> {
         ),
         decoration: const BoxDecoration(
           color: AppColors.creamBackground,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
         ),
         child: SafeArea(
           top: false,
@@ -173,8 +135,7 @@ class _AddExpenseSheetState extends State<AddExpenseSheet> {
               const CalculatorSheetHandle(),
               Flexible(
                 child: SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+                  padding: const EdgeInsets.fromLTRB(28, 8, 28, 32),
                   child: Form(
                     key: _formKey,
                     child: Column(
@@ -182,39 +143,11 @@ class _AddExpenseSheetState extends State<AddExpenseSheet> {
                       children: [
                         Row(
                           children: [
-                            Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: AppColors.sagePrimary.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                              child: const Icon(
-                                Icons.receipt_long_outlined,
-                                color: AppColors.sagePrimary,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Записать расход',
-                                    style: AppTextStyles.h2.copyWith(fontSize: 20),
-                                  ),
-                                  Text(
-                                    'Учёт затрат на содержание',
-                                    style: AppTextStyles.caption,
-                                  ),
-                                ],
-                              ),
-                            ),
+                            Text('Записать расход', style: AppTextStyles.h1.copyWith(fontSize: 24)),
+                            const Spacer(),
                             IconButton(
-                              onPressed: _isSubmitting
-                                  ? null
-                                  : () => Navigator.of(context).pop(),
-                              icon: const Icon(Icons.close_rounded),
-                              color: AppColors.textLight,
+                              onPressed: () => Navigator.pop(context),
+                              icon: const Icon(Icons.close_rounded, color: AppColors.textLight),
                             ),
                           ],
                         ),
@@ -223,118 +156,50 @@ class _AddExpenseSheetState extends State<AddExpenseSheet> {
                           assets: widget.assets,
                           selectedAssetId: _selectedAssetId,
                           errorText: _assetError,
-                          onChanged: (value) {
-                            if (_isSubmitting) return;
-                            setState(() {
-                              _selectedAssetId = value;
-                              _assetError = null;
-                            });
-                          },
+                          onChanged: (v) => setState(() {
+                            _selectedAssetId = v;
+                            _assetError = null;
+                          }),
                         ),
-                        const SizedBox(height: 20),
-                        AnimatedInputField(
-                          controller: _feedController,
-                          label: 'Корма',
-                          prefixIcon: Icons.grass_outlined,
-                          keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true,
-                          ),
-                          validator: validateOptionalDouble,
-                        ),
-                        const SizedBox(height: 16),
-                        AnimatedInputField(
-                          controller: _vetController,
-                          label: 'Ветеринария и вакцины',
-                          prefixIcon: Icons.medical_services_outlined,
-                          keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true,
-                          ),
-                          validator: validateOptionalDouble,
-                        ),
-                        const SizedBox(height: 16),
-                        AnimatedInputField(
-                          controller: _utilityController,
-                          label: 'Коммунальные услуги / обогрев',
-                          prefixIcon: Icons.bolt_outlined,
-                          keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true,
-                          ),
-                          validator: validateOptionalDouble,
-                        ),
-                        const SizedBox(height: 16),
-                        AnimatedInputField(
-                          controller: _otherController,
-                          label: 'Прочее',
-                          prefixIcon: Icons.more_horiz_rounded,
-                          keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true,
-                          ),
-                          validator: validateOptionalDouble,
-                        ),
+                        const SizedBox(height: 28),
+                        Text('Категория', style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold, color: AppColors.sageDark)),
+                        const SizedBox(height: 14),
+                        _buildMainCategorySelector(),
                         const SizedBox(height: 24),
-                        AnimatedContainer(
-                          duration: const Duration(milliseconds: 220),
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 16,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.sagePrimary.withValues(alpha: 0.08),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: AppColors.sagePrimary.withValues(alpha: 0.2),
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                'Итого расходов',
-                                style: AppTextStyles.bodyMedium.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.sageDark,
-                                ),
-                              ),
-                              Text(
-                                '${_currencyFormat.format(_totalExpenses)} ₸',
-                                style: AppTextStyles.h2.copyWith(
-                                  color: AppColors.sagePrimary,
-                                ),
-                              ),
-                            ],
-                          ),
+                        Text('Тип затрат', style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold, color: AppColors.sageDark)),
+                        const SizedBox(height: 12),
+                        _buildSubCategoryChips(),
+                        const SizedBox(height: 28),
+                        AnimatedInputField(
+                          controller: _amountController,
+                          label: 'Сумма (₸)',
+                          prefixIcon: Icons.payments_outlined,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          validator: validateRequiredDouble,
                         ),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 16),
+                        AnimatedInputField(
+                          controller: _descController,
+                          label: 'Комментарий',
+                          prefixIcon: Icons.notes_rounded,
+                        ),
+                        const SizedBox(height: 40),
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
-                            onPressed: _isSubmitting || widget.assets.isEmpty
-                                ? null
-                                : _submit,
+                            onPressed: _isSubmitting ? null : _submit,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.sagePrimary,
+                              foregroundColor: Colors.white,
+                              minimumSize: const Size.fromHeight(64),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                              elevation: 0,
+                            ),
                             child: _isSubmitting
-                                ? const SizedBox(
-                                    height: 24,
-                                    width: 24,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2.5,
-                                      color: Colors.white,
-                                    ),
-                                  )
-                                : const Text('Сохранить расход'),
+                                ? const CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
+                                : const Text('Подтвердить операцию', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                           ),
                         ),
-                        if (widget.assets.isEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 12),
-                            child: Text(
-                              'Сначала добавьте группу поголовья',
-                              textAlign: TextAlign.center,
-                              style: AppTextStyles.caption.copyWith(
-                                color: AppColors.errorSoft,
-                              ),
-                            ),
-                          ),
                       ],
                     ),
                   ),
@@ -345,5 +210,139 @@ class _AddExpenseSheetState extends State<AddExpenseSheet> {
         ),
       ),
     );
+  }
+
+  Widget _buildMainCategorySelector() {
+    return Row(
+      children: [
+        _catButton('feed', Icons.grass_outlined, 'Корм'),
+        const SizedBox(width: 10),
+        _catButton('vet', Icons.medical_services_outlined, 'Вет.'),
+        const SizedBox(width: 10),
+        _catButton('utility', Icons.bolt_outlined, 'Комм.'),
+        const SizedBox(width: 10),
+        _catButton('other', Icons.more_horiz_rounded, 'Пр.'),
+      ],
+    );
+  }
+
+  Widget _catButton(String id, IconData icon, String label) {
+    final isSelected = _mainCategory == id;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => _onMainCategoryChanged(id),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOutCubic,
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          decoration: BoxDecoration(
+            color: isSelected ? AppColors.sagePrimary : AppColors.creamSurface,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: isSelected ? AppColors.sagePrimary : AppColors.sageLight.withValues(alpha: 0.15), width: 1.5),
+            boxShadow: isSelected ? [BoxShadow(color: AppColors.sagePrimary.withValues(alpha: 0.2), blurRadius: 10, offset: const Offset(0, 4))] : null,
+          ),
+          child: Column(
+            children: [
+              Icon(icon, color: isSelected ? Colors.white : AppColors.sagePrimary, size: 22),
+              const SizedBox(height: 6),
+              Text(label, style: AppTextStyles.caption.copyWith(
+                color: isSelected ? Colors.white : AppColors.sageDark, 
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                fontSize: 11,
+              )),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSubCategoryChips() {
+    List<dynamic> options = [];
+    if (_mainCategory == 'feed') options = FeedSubType.values.where((e) => e != FeedSubType.unknown).toList();
+    else if (_mainCategory == 'vet') options = VetSubType.values.where((e) => e != VetSubType.unknown).toList();
+    else if (_mainCategory == 'utility') options = UtilitySubType.values.where((e) => e != UtilitySubType.unknown).toList();
+    else options = OtherSubType.values.where((e) => e != OtherSubType.unknown).toList();
+
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 300),
+      transitionBuilder: (child, animation) => FadeTransition(opacity: animation, child: SlideTransition(position: Tween<Offset>(begin: const Offset(0.05, 0), end: Offset.zero).animate(animation), child: child)),
+      child: Container(
+        key: ValueKey(_mainCategory),
+        height: 48,
+        child: ListView.builder(
+          scrollDirection: Axis.horizontal,
+          physics: const BouncingScrollPhysics(),
+          itemCount: options.length,
+          itemBuilder: (context, index) {
+            final opt = options[index];
+            final isSelected = _subCategory == opt;
+            return Padding(
+              padding: const EdgeInsets.only(right: 10),
+              child: ChoiceChip(
+                label: Text(_getLabel(opt)),
+                selected: isSelected,
+                onSelected: (val) => setState(() => _subCategory = opt),
+                selectedColor: AppColors.sagePrimary.withValues(alpha: 0.1),
+                backgroundColor: AppColors.creamSurface,
+                labelStyle: TextStyle(
+                  color: isSelected ? AppColors.sagePrimary : AppColors.textDark,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  fontSize: 13,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  side: BorderSide(color: isSelected ? AppColors.sagePrimary : AppColors.sageLight.withValues(alpha: 0.15)),
+                ),
+                showCheckmark: false,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  String _getLabel(dynamic opt) {
+    if (opt is FeedSubType) {
+      switch(opt) {
+        case FeedSubType.roughageHay: return 'Сено/Грубые';
+        case FeedSubType.silage: return 'Силос/Сенаж';
+        case FeedSubType.concentrates: return 'Концентраты';
+        case FeedSubType.prestarter: return 'Престартер';
+        case FeedSubType.compoundFeed: return 'Комбикорм';
+        default: return '';
+      }
+    }
+    if (opt is VetSubType) {
+      switch(opt) {
+        case VetSubType.vaccination: return 'Вакцинация';
+        case VetSubType.antibiotics: return 'Лечение';
+        case VetSubType.insemination: return 'Осеменение';
+        case VetSubType.vitamins: return 'Витамины';
+        case VetSubType.vetVisit: return 'Вызов врача';
+        default: return '';
+      }
+    }
+    if (opt is UtilitySubType) {
+      switch(opt) {
+        case UtilitySubType.electricityIncubation: return 'Свет/Инкубация';
+        case UtilitySubType.waterSupply: return 'Вода';
+        case UtilitySubType.heating: return 'Отопление';
+        case UtilitySubType.ventilation: return 'Вентиляция';
+        default: return '';
+      }
+    }
+    if (opt is OtherSubType) {
+      switch(opt) {
+        case OtherSubType.logistics: return 'Транспорт';
+        case OtherSubType.tagsChips: return 'Бирки/Чипы';
+        case OtherSubType.slaughterShearing: return 'Убой/Стрижка';
+        case OtherSubType.bedding: return 'Подстилка';
+        default: return '';
+      }
+    }
+    return '';
   }
 }

@@ -6,6 +6,7 @@ import 'package:agroledger/core/services/auth_session_service.dart';
 import 'package:agroledger/core/network/dio_client.dart';
 import 'package:agroledger/features/auth/data/datasources/auth_remote_data_source.dart';
 import 'package:agroledger/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:agroledger/features/calculator/data/datasources/calculator_remote_data_source.dart';
 import 'package:agroledger/features/calculator/data/repositories/calculator_repository.dart';
 import 'package:agroledger/features/calculator/domain/services/report_export_service.dart';
 import 'package:agroledger/features/calculator/presentation/bloc/calculator_bloc.dart';
@@ -35,8 +36,11 @@ Future<void> initServiceLocator() async {
       sl<FlutterSecureStorage>(),
     ),
   );
+  sl.registerLazySingleton<CalculatorRemoteDataSource>(
+    () => CalculatorRemoteDataSourceImpl(sl<DioClient>()),
+  );
   sl.registerLazySingleton<CalculatorRepository>(
-    () => CalculatorRepository(sl<DioClient>()),
+    () => CalculatorRepository(sl<CalculatorRemoteDataSource>()),
   );
   sl.registerLazySingleton<ReportExportService>(ReportExportService.new);
   sl.registerLazySingleton<MarketplaceRemoteDataSource>(
