@@ -10,11 +10,7 @@ class BusinessService:
         self.repository = BusinessRepository(db)
 
     def create_profile(self, user: User, profile_in: BusinessProfileCreate):
-        if user.role != UserRole.BUSINESS:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Only users with 'business' role can create a profile."
-            )
+        # Universal access: Removed role check
 
         existing_profile = self.repository.get_by_user_id(user.id)
         if existing_profile:
