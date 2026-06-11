@@ -5,6 +5,8 @@ import 'package:agroledger/core/theme/app_theme.dart';
 import 'package:agroledger/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:agroledger/features/auth/presentation/pages/auth_flow_controller.dart';
 import 'package:agroledger/features/calculator/presentation/bloc/calculator_bloc.dart';
+import 'package:agroledger/features/calculator/presentation/bloc/calendar_bloc.dart';
+import 'package:agroledger/features/calculator/presentation/bloc/calendar_event.dart';
 import 'package:agroledger/features/marketplace/presentation/bloc/marketplace_bloc.dart';
 
 void main() async {
@@ -31,6 +33,9 @@ class AgroLedgerApp extends StatelessWidget {
         ),
         BlocProvider<MarketplaceBloc>(
           create: (context) => sl<MarketplaceBloc>(),
+        ),
+        BlocProvider<CalendarBloc>(
+          create: (context) => sl<CalendarBloc>()..add(const LoadCalendarTasksEvent()),
         ),
       ],
       child: MaterialApp(

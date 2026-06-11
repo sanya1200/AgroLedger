@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/intl.dart';
 import 'package:agroledger/core/theme/app_colors.dart';
 import 'package:agroledger/core/theme/app_text_styles.dart';
 import 'package:agroledger/core/presentation/widgets/soft_card.dart';
 import 'package:agroledger/features/home/presentation/pages/business_setup_screen.dart';
+import 'package:agroledger/features/home/presentation/pages/ai_consultant_screen.dart';
+import 'package:agroledger/features/calculator/presentation/bloc/calendar_bloc.dart';
+import 'package:agroledger/features/calculator/presentation/bloc/calendar_state.dart';
+import 'package:agroledger/features/calculator/data/models/livestock_task_model.dart';
 
 class HomeScreen extends StatelessWidget {
   final VoidCallback? onNavigateToCalculator;
@@ -34,6 +40,116 @@ class HomeScreen extends StatelessWidget {
             const SizedBox(height: 8),
             Text('Ваше цифровое сельское хозяйство', 
               style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textLight)),
+            const SizedBox(height: 28),
+            
+            // Upcoming tasks section
+            BlocBuilder<CalendarBloc, CalendarState>(
+              builder: (context, state) {
+                List<LivestockTaskModel> tasks = [];
+                if (state is CalendarTasksLoaded) {
+                  tasks = state.tasks.where((t) => !t.isCompleted).toList();
+                }
+                if (tasks.isEmpty) return const SizedBox.shrink();
+                
+                final nextTask = tasks.first;
+                final dateFormat = DateFormat('dd.MM.yyyy HH:mm');
+                
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Ближайшая задача', style: AppTextStyles.h2.copyWith(fontSize: 20)),
+                    const SizedBox(height: 12),
+                    SoftCard(
+                      color: AppColors.errorSoft.withValues(alpha: 0.05),
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: const BoxDecoration(
+                              color: AppColors.errorSoft,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.notifications_active_rounded, color: Colors.white, size: 20),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  nextTask.title,
+                                  style: AppTextStyles.bodyMax.copyWith(fontWeight: FontWeight.bold),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Дата: ${dateFormat.format(nextTask.plannedDate)}',
+                                  style: AppTextStyles.caption.copyWith(color: AppColors.textLight),
+                                ),
+                              ],
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: onNavigateToCalculator,
+                            child: const Text('Открыть'),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 28),
+                  ],
+                );
+              },
+            ),
+
+            // AI Veterinarian Banner
+            GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AIConsultantScreen()),
+                );
+              },
+              child: SoftCard(
+                color: AppColors.sagePrimary,
+                padding: const EdgeInsets.all(20),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.psychology_outlined, color: Colors.white, size: 28),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'ИИ Консультант (AI Ветеринар)',
+                            style: AppTextStyles.bodyMax.copyWith(
+                              color: Colors.white, 
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Задайте вопрос по уходу за животными или диагностике симптомов прямо сейчас.',
+                            style: AppTextStyles.caption.copyWith(
+                              color: Colors.white.withValues(alpha: 0.8),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 16),
+                  ],
+                ),
+              ),
+            ),
             const SizedBox(height: 28),
             
             // News/Updates Section
@@ -93,11 +209,16 @@ class HomeScreen extends StatelessWidget {
                   },
                 ),
                 _buildQuickAction(
-                  'Помощь',
-                  'Служба поддержки',
-                  Icons.help_outline_rounded,
+                  'AI Ветеринар',
+                  'Консультант ИИ',
+                  Icons.psychology_outlined,
                   AppColors.errorSoft,
-                  onNavigateToHelp,
+                  () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const AIConsultantScreen()),
+                    );
+                  },
                 ),
               ],
             ),

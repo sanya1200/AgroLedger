@@ -17,7 +17,8 @@ import 'package:agroledger/features/calculator/presentation/widgets/earnings_sou
 import 'package:agroledger/features/calculator/domain/services/report_export_service.dart';
 import 'package:agroledger/core/di/service_locator.dart';
 import 'package:agroledger/features/calculator/presentation/widgets/add_asset_sheet.dart';
-import 'package:agroledger/features/calculator/presentation/widgets/premium_paywall_sheet.dart';
+import 'package:agroledger/features/calculator/presentation/widgets/vet_tasks_widget.dart';
+import 'package:agroledger/features/home/presentation/pages/premium_hub_screen.dart';
 
 class CalculatorDashboardScreen extends StatefulWidget {
   const CalculatorDashboardScreen({super.key});
@@ -126,7 +127,10 @@ class _CalculatorDashboardScreenState extends State<CalculatorDashboardScreen> {
   }
 
   void _showPremiumPaywall(BuildContext context, {required String title, required String message}) {
-    PremiumPaywallSheet.show(context, title: title, message: message);
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const PremiumHubScreen()),
+    );
   }
 
   Future<void> _exportReport(CalculatorSummaryModel summary) async {
@@ -258,7 +262,7 @@ class _CalculatorDashboardScreenState extends State<CalculatorDashboardScreen> {
             _showPremiumPaywall(
               context,
               title: 'Лимит групп достигнут',
-              message: 'В бесплатной версии можно вести учет до 2-х групп одновременно. Перейдите на Premium, чтобы добавить больше!',
+              message: 'В бесплатной версии можно вести учет до 5 групп одновременно. Перейдите на Premium, чтобы добавить больше!',
             );
           } else if (state is CalculatorPremiumLockedState) {
             _showPremiumPaywall(
@@ -361,6 +365,11 @@ class _CalculatorDashboardScreenState extends State<CalculatorDashboardScreen> {
                   const SizedBox(height: 24),
                   EarningsSourcesSection(
                     earningsByProduct: summary.earningsByProduct,
+                  ),
+                  const SizedBox(height: 28),
+                  VetTasksWidget(
+                    assets: state.assets,
+                    selectedAssetId: _selectedAssetId,
                   ),
                   const SizedBox(height: 28),
                   Text(

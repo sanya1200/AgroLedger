@@ -6,8 +6,9 @@ import 'package:agroledger/core/theme/app_text_styles.dart';
 import 'package:agroledger/core/presentation/widgets/soft_card.dart';
 
 import 'package:agroledger/features/auth/presentation/widgets/animated_input_field.dart';
-
 import 'package:agroledger/features/home/presentation/pages/business_setup_screen.dart';
+import 'package:agroledger/features/home/presentation/pages/premium_hub_screen.dart';
+import 'package:intl/intl.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -65,6 +66,61 @@ class ProfileScreen extends StatelessWidget {
                   ),
                 ),
                 
+                const SizedBox(height: 24),
+
+                // Premium Status Banner Card
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const PremiumHubScreen()),
+                    );
+                  },
+                  child: SoftCard(
+                    color: user.isPremium ? AppColors.sagePrimary : AppColors.accentGold,
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                    child: Row(
+                      children: [
+                        Icon(
+                          user.isPremium ? Icons.stars_rounded : Icons.star_border_rounded, 
+                          color: user.isPremium ? AppColors.accentGold : Colors.white, 
+                          size: 32,
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                user.isPremium ? 'AgroLedger Premium' : 'Активировать Premium',
+                                style: AppTextStyles.bodyMax.copyWith(
+                                  color: user.isPremium ? Colors.white : AppColors.sageDark,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                user.isPremium 
+                                    ? 'Активен до: ${user.premiumUntil != null ? DateFormat('dd.MM.yyyy').format(user.premiumUntil!) : '—'}'
+                                    : 'ИИ-Ветеринар, безлимитные группы, PDF-отчёты',
+                                style: AppTextStyles.caption.copyWith(
+                                  color: user.isPremium ? Colors.white.withValues(alpha: 0.8) : AppColors.textDark.withValues(alpha: 0.7),
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Icon(
+                          Icons.arrow_forward_ios_rounded, 
+                          color: user.isPremium ? Colors.white : AppColors.sageDark, 
+                          size: 16,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
                 const SizedBox(height: 24),
                 
                 // Contact Info

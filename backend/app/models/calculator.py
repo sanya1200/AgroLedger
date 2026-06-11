@@ -91,6 +91,9 @@ class LivestockAsset(Base):
     yields: Mapped[List["LivestockYield"]] = relationship(
         "LivestockYield", back_populates="asset", cascade="all, delete-orphan"
     )
+    tasks: Mapped[List["LivestockTask"]] = relationship(
+        "LivestockTask", back_populates="asset", cascade="all, delete-orphan"
+    )
 
 
 class LivestockExpenses(Base):

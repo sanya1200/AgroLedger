@@ -45,7 +45,7 @@ class CalculatorService:
         # Free version limit check
         if not user.premium_active:
             asset_count = self.db.query(LivestockAsset).filter(LivestockAsset.user_id == user.id).count()
-            if asset_count >= 2:
+            if asset_count >= 5:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="FREE_LIMIT_REACHED"

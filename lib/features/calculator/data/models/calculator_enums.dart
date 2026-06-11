@@ -92,6 +92,23 @@ enum ProductSubType {
   }
 }
 
+enum TaskType {
+  vaccination,
+  vetCheck,
+  breeding,
+  feeding,
+  general,
+  unknown;
+
+  static TaskType fromString(String? value) {
+    if (value == null) return TaskType.unknown;
+    return TaskType.values.firstWhere(
+      (e) => e.name == value || _toSnakeCase(e.name) == value,
+      orElse: () => TaskType.unknown,
+    );
+  }
+}
+
 String _toSnakeCase(String input) {
   return input.replaceAllMapped(
       RegExp(r'([A-Z])'), (match) => '_${match.group(1)!.toLowerCase()}');

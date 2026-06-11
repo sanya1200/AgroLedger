@@ -14,11 +14,13 @@ from app.models.user import User, UserSession
 from app.models.business_profile import BusinessProfile
 from app.models.marketplace import Product
 from app.models.calculator import LivestockAsset, LivestockExpenses, LivestockYield
+from app.models.calendar import LivestockTask
 
 import app.routers.auth as auth_mod
 import app.routers.business as business_mod
 import app.routers.calculator as calculator_mod
 import app.routers.marketplace as marketplace_mod
+import app.routers.calendar as calendar_mod
 
 logging.basicConfig(
     level=logging.INFO,
@@ -225,6 +227,7 @@ app.include_router(auth_mod.router, prefix=f"{settings.API_V1_STR}/auth", tags=[
 app.include_router(business_mod.router, prefix=f"{settings.API_V1_STR}/business", tags=["Business Profile"])
 app.include_router(calculator_mod.router, prefix=f"{settings.API_V1_STR}/calculator", tags=["Calculations"])
 app.include_router(marketplace_mod.router, prefix=f"{settings.API_V1_STR}/marketplace", tags=["Marketplace"])
+app.include_router(calendar_mod.router, prefix=f"{settings.API_V1_STR}/calendar", tags=["Calendar"])
 
 @app.exception_handler(StarletteHTTPException)
 async def http_exception_handler(request: Request, exc: StarletteHTTPException):

@@ -4,6 +4,7 @@ import 'package:agroledger/core/network/error_handler.dart';
 import 'package:agroledger/features/calculator/data/models/livestock_asset_model.dart';
 import 'package:agroledger/features/calculator/data/models/calculator_summary_model.dart';
 import 'package:agroledger/features/calculator/data/models/predictive_forecast_model.dart';
+import 'package:agroledger/features/calculator/data/models/livestock_task_model.dart';
 
 class FreeLimitException implements Exception {}
 class PremiumRequiredException implements Exception {}
@@ -16,6 +17,12 @@ abstract class CalculatorRemoteDataSource {
   Future<CalculatorSummaryModel> getSummary({int? assetId});
   Future<PredictiveForecastModel> getPredictiveForecast(int assetId);
   Future<void> activatePremiumDebug();
+  
+  // Veterinary & Breeding Tasks
+  Future<List<LivestockTaskModel>> getTasks();
+  Future<LivestockTaskModel> createTask(Map<String, dynamic> taskData);
+  Future<LivestockTaskModel> updateTask(int taskId, Map<String, dynamic> taskData);
+  Future<void> deleteTask(int taskId);
 }
 
 class CalculatorRemoteDataSourceImpl implements CalculatorRemoteDataSource {
@@ -129,6 +136,59 @@ class CalculatorRemoteDataSourceImpl implements CalculatorRemoteDataSource {
       _unwrap(response.data);
     } on DioException catch (e) {
       throw handleDioError(e, 'Ошибка активации премиума');
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  @override
+  Future<List<LivestockTaskModel>> getTasks() async {
+    try {
+      final response = await _client.dio.get('calendar/tasks');
+      final data = _unwrap(response.data);
+      return (data as List)
+          .map((e) => LivestockTaskModel.fromJson(Map<String, dynamic>.from(e)))
+          .toList();
+    } on DioException catch (e) {
+      throw handleDioError(e, 'Ошибка получения задач календаря');
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  @override
+  Future<LivestockTaskModel> createTask(Map<String, dynamic> taskData) async {
+    try {
+      final response = await _client.dio.post('calendar/tasks', data: taskData);
+      final data = _unwrap(response.data);
+      return LivestockTaskModel.fromJson(Map<String, dynamic>.from(data));
+    } on DioException catch (e) {
+      throw handleDioError(e, 'Ошибка создания календарной задачи');
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  @override
+  Future<LivestockTaskModel> updateTask(int taskId, Map<String, dynamic> taskData) async {
+    try {
+      final response = await _client.dio.patch('calendar/tasks/$taskId', data: taskData);
+      final data = _unwrap(response.data);
+      return LivestockTaskModel.fromJson(Map<String, dynamic>.from(data));
+    } on DioException catch (e) {
+      throw handleDioError(e, 'Ошибка обновления календарной задачи');
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  @override
+  Future<void> deleteTask(int taskId) async {
+    try {
+      final response = await _client.dio.delete('calendar/tasks/$taskId');
+      _unwrap(response.data);
+    } on DioException catch (e) {
+      throw handleDioError(e, 'Ошибка удаления календарной задачи');
     } catch (e) {
       rethrow;
     }
