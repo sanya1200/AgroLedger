@@ -140,9 +140,11 @@ class CalculatorService:
         earnings_by_product = {}
         for y in yields:
             key = y.product_sub_type
-            if hasattr(key, "value"):
+            if key is None:
+                key = "other"
+            elif hasattr(key, "value"):
                 key = key.value
-            earnings_by_product[key] = earnings_by_product.get(key, Decimal("0")) + Decimal(str(y.earnings))
+            earnings_by_product[str(key)] = earnings_by_product.get(str(key), Decimal("0")) + Decimal(str(y.earnings))
 
         net_profit = total_earnings - total_costs
         roi = float((net_profit / total_costs) * 100) if total_costs > 0 else 0.0
@@ -195,7 +197,10 @@ class CalculatorService:
                     advice = "Внимание: высокий расход корма. Проверьте качество комбикорма и температурный режим."
 
         # Break-even for Ruminants or Layers
-        days_active = (datetime.now(timezone.utc) - asset.created_at).days or 1
+        if asset.created_at is not None:
+            days_active = (datetime.now(timezone.utc) - asset.created_at).days or 1
+        else:
+            days_active = 1
         avg_daily_earnings = total_earnings / days_active
 
         if avg_daily_earnings > 0:
