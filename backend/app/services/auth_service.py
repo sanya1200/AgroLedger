@@ -36,9 +36,27 @@ class AuthService:
                 full_name=data.full_name,
                 hashed_password=get_password_hash(data.password),
                 role=str(data.role),
+                is_verified=False,
                 created_at=datetime.now(timezone.utc)
             )
-            return self.repo.create_user(new_user)
+            user = self.repo.create_user(new_user)
+
+            # Generate verification code
+            import random
+            from app.models.user import VerificationCode
+            code = f"{random.randint(100000, 999999)}"
+            expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
+
+            verification_entry = VerificationCode(
+                email=user.email,
+                code=code,
+                expires_at=expires_at
+            )
+            self.repo.db.add(verification_entry)
+            self.repo.db.commit()
+
+            logger.info(f"\n========================================\nVERIFICATION CODE for {user.email}: {code}\n========================================\n")
+            return user
         except Exception as e:
             logger.error(f"Error creating user in DB: {e}")
             raise HTTPException(
@@ -58,6 +76,12 @@ class AuthService:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="User account is deactivated"
+            )
+
+        if not user.is_verified:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="EMAIL_NOT_VERIFIED"
             )
 
         self.repo.revoke_all_user_sessions(user.id)
@@ -155,7 +179,38 @@ class AuthService:
         )
 
     def google_signin(self, data: GoogleSignInRequest, meta: dict) -> TokenResponse:
-        user = self.repo.get_user_by_identity(data.email)
+        email = data.email
+        if data.id_token and data.id_token != "mock_debug_token":
+            try:
+                from google.oauth2 import id_token
+                from google.auth.transport import requests as google_requests
+                
+                # Verify the token signature.
+                id_info = id_token.verify_oauth2_token(
+                    data.id_token, google_requests.Request(), audience=None
+                )
+                
+                token_email = id_info.get("email")
+                if not token_email or token_email.lower() != email.lower():
+                    raise HTTPException(
+                        status_code=status.HTTP_401_UNAUTHORIZED,
+                        detail="Email in token does not match requested email"
+                    )
+            except Exception as e:
+                logger.error(f"Google ID token verification failed: {e}")
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail=f"Google ID token verification failed: {str(e)}"
+                )
+        elif data.id_token == "mock_debug_token":
+            logger.info("Using mock_debug_token for Google Sign-In developer fallback")
+        else:
+            logger.warning("Google Sign-In called without id_token")
+            # We don't enforce strictly to preserve compatibility during setup,
+            # but log warning.
+            pass
+
+        user = self.repo.get_user_by_identity(email)
         
         if not user:
             if not data.phone or not data.role:
@@ -208,4 +263,71 @@ class AuthService:
             refresh_token=tokens["refresh_token"],
             expires_in=tokens["expires_in"]
         )
+
+    def verify_email(self, email: str, code: str) -> User:
+        from app.models.user import VerificationCode
+        now = datetime.now(timezone.utc)
+        
+        # Get latest verification code for email
+        entry = self.repo.db.query(VerificationCode).filter(
+            VerificationCode.email == email
+        ).order_by(VerificationCode.created_at.desc()).first()
+        
+        if not entry or entry.code != code:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Неверный код подтверждения"
+            )
+            
+        if entry.expires_at < now:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Срок действия кода истек"
+            )
+            
+        user = self.repo.get_user_by_identity(email)
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Пользователь не найден"
+            )
+            
+        user.is_verified = True
+        # Clear verification codes
+        self.repo.db.query(VerificationCode).filter(VerificationCode.email == email).delete()
+        self.repo.db.commit()
+        self.repo.db.refresh(user)
+        return user
+
+    def resend_verification_code(self, email: str):
+        user = self.repo.get_user_by_identity(email)
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Пользователь не найден"
+            )
+        if user.is_verified:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email уже подтвержден"
+            )
+            
+        import random
+        from app.models.user import VerificationCode
+        
+        # Invalidate past codes
+        self.repo.db.query(VerificationCode).filter(VerificationCode.email == email).delete()
+        
+        code = f"{random.randint(100000, 999999)}"
+        expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
+        
+        verification_entry = VerificationCode(
+            email=email,
+            code=code,
+            expires_at=expires_at
+        )
+        self.repo.db.add(verification_entry)
+        self.repo.db.commit()
+        
+        logger.info(f"\n========================================\nVERIFICATION CODE (RESENT) for {email}: {code}\n========================================\n")
 

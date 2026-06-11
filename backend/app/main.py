@@ -10,7 +10,7 @@ from sqlalchemy import text
 from app.core.config import settings
 from app.core.database import engine, Base
 
-from app.models.user import User, UserSession
+from app.models.user import User, UserSession, VerificationCode
 from app.models.business_profile import BusinessProfile
 from app.models.marketplace import Product
 from app.models.calculator import LivestockAsset, LivestockExpenses, LivestockYield

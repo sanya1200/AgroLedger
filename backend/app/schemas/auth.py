@@ -78,7 +78,17 @@ class UserDetailResponse(BaseModel):
 
 class GoogleSignInRequest(BaseModel):
     email: EmailStr
+    id_token: Optional[str] = None
     full_name: Optional[str] = None
     phone: Optional[str] = None
     role: Optional[str] = None
+
+
+class VerifyEmailRequest(BaseModel):
+    email: EmailStr
+    code: str = Field(..., pattern=r"^\d{6}$")
+
+
+class ResendCodeRequest(BaseModel):
+    email: EmailStr
 

@@ -8,6 +8,8 @@ import 'package:agroledger/core/presentation/widgets/soft_card.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:agroledger/features/auth/presentation/widgets/google_sign_in_button.dart';
 import 'package:agroledger/features/auth/presentation/widgets/google_registration_completion_dialog.dart';
+import 'email_verification_screen.dart';
+import 'package:agroledger/features/auth/presentation/widgets/password_strength_indicator.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -26,9 +28,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _isGoogleAction = false;
   String? _googleEmail;
   String? _googleName;
+  String? _googleIdToken;
+
+  @override
+  void initState() {
+    super.initState();
+    _passwordController.addListener(_onPasswordChanged);
+  }
+
+  void _onPasswordChanged() {
+    setState(() {});
+  }
 
   @override
   void dispose() {
+    _passwordController.removeListener(_onPasswordChanged);
     _nameController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
@@ -73,10 +87,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       final email = account.email;
       final name = account.displayName ?? 'Google User';
+      final googleAuth = await account.authentication;
+      final idToken = googleAuth.idToken;
 
       setState(() {
         _googleEmail = email;
         _googleName = name;
+        _googleIdToken = idToken;
       });
 
       if (mounted) {
@@ -84,6 +101,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               AuthGoogleSignInRequested(
                 email: email,
                 fullName: name,
+                idToken: idToken,
               ),
             );
       }
@@ -144,12 +162,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() {
       _googleEmail = email;
       _googleName = name;
+      _googleIdToken = 'mock_debug_token';
       _isGoogleAction = true;
     });
     context.read<AuthBloc>().add(
           const AuthGoogleSignInRequested(
             email: email,
             fullName: name,
+            idToken: 'mock_debug_token',
           ),
         );
   }
@@ -171,6 +191,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 fullName: _googleName!,
                 phone: phone,
                 role: role,
+                idToken: _googleIdToken,
               ),
             );
       }
@@ -179,6 +200,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         _isGoogleAction = false;
         _googleEmail = null;
         _googleName = null;
+        _googleIdToken = null;
       });
     }
   }
@@ -195,11 +217,33 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ),
       body: BlocListener<AuthBloc, AuthState>(
         listener: (context, state) {
+          if (state.needsVerificationEmail != null) {
+            final email = state.needsVerificationEmail!;
+            final authBloc = context.read<AuthBloc>();
+            authBloc.add(AuthClearVerificationEmail());
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => EmailVerificationScreen(email: email),
+              ),
+            ).then((verified) {
+              if (verified == true) {
+                // Auto login after successful verification
+                authBloc.add(
+                  AuthLoginRequested(
+                    email: _emailController.text.trim(),
+                    password: _passwordController.text.trim(),
+                  ),
+                );
+              }
+            });
+            return;
+          }
           if (state.status == AuthStatus.authenticated || state.status == AuthStatus.authorized) {
             setState(() {
               _isGoogleAction = false;
               _googleEmail = null;
               _googleName = null;
+              _googleIdToken = null;
             });
             // After successful registration, we are now authenticated
             // The AuthFlowController will handle the switch to PIN screen
@@ -273,6 +317,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           return null;
                         },
                       ),
+                      PasswordStrengthIndicator(password: _passwordController.text),
                       const SizedBox(height: 32),
                       BlocBuilder<AuthBloc, AuthState>(
                         builder: (context, state) {

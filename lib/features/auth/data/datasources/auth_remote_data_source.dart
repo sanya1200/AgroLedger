@@ -28,7 +28,10 @@ abstract class AuthRemoteDataSource {
     required String fullName,
     String? phone,
     String? role,
+    String? idToken,
   });
+  Future<void> verifyEmail(String email, String code);
+  Future<void> resendVerificationCode(String email);
 }
 
 class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
@@ -213,6 +216,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     required String fullName,
     String? phone,
     String? role,
+    String? idToken,
   }) async {
     try {
       final response = await _client.dio.post(
@@ -222,6 +226,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
           'full_name': fullName,
           if (phone != null) 'phone': phone,
           if (role != null) 'role': role,
+          if (idToken != null) 'id_token': idToken,
         },
         options: Options(headers: _getDeviceHeaders()),
       );
@@ -235,6 +240,47 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         return await getMe();
       } else {
         throw data?['error'] ?? 'Ошибка входа через Google';
+      }
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  @override
+  Future<void> verifyEmail(String email, String code) async {
+    try {
+      final response = await _client.dio.post(
+        'auth/verify-email',
+        data: {
+          'email': email,
+          'code': code,
+        },
+      );
+      final data = response.data;
+      if (data == null || data['success'] != true) {
+        throw data?['error'] ?? 'Ошибка подтверждения email';
+      }
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  @override
+  Future<void> resendVerificationCode(String email) async {
+    try {
+      final response = await _client.dio.post(
+        'auth/resend-code',
+        data: {
+          'email': email,
+        },
+      );
+      final data = response.data;
+      if (data == null || data['success'] != true) {
+        throw data?['error'] ?? 'Ошибка отправки кода';
       }
     } on DioException catch (e) {
       throw _handleDioError(e);

@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "1003012454608",
+    "project_id": "agroledger-1716b",
+    "storage_bucket": "agroledger-1716b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1003012454608:android:bf5b424ba323b05da0c6d5",
+        "android_client_info": {
+          "package_name": "com.example.agroledger"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1003012454608-qnkj9mvo1p39qrdur09p7554u7ihfr0n.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.agroledger",
+            "certificate_hash": "168c7e126733b7305e4dd93e9ea059e594180966"
+          }
+        },
+        {
+          "client_id": "1003012454608-vj06k32jvsqvtksptbutnjdfpspj8ndq.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDQYx_nEuGmI04x7VERLyaP6t_a7o4jw8o"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1003012454608-vj06k32jvsqvtksptbutnjdfpspj8ndq.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

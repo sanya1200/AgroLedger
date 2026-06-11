@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.dependencies import get_current_user
 from app.models.user import User
-from app.schemas.auth import BaseResponse, SignUpRequest, SignInRequest, TokenResponse, UserDetailResponse, PinSetupRequest, UpdateSettingsRequest, GoogleSignInRequest
+from app.schemas.auth import BaseResponse, SignUpRequest, SignInRequest, TokenResponse, UserDetailResponse, PinSetupRequest, UpdateSettingsRequest, GoogleSignInRequest, VerifyEmailRequest, ResendCodeRequest
 from app.services.auth_service import AuthService
 from app.core.security import get_password_hash
 from app.repositories.user_repository import UserRepository
@@ -157,4 +157,24 @@ def google_signin(
     }
     tokens = service.google_signin(data, meta)
     return BaseResponse(data=tokens)
+
+@router.post("/verify-email", response_model=BaseResponse[str])
+def verify_email(
+    data: VerifyEmailRequest,
+    db: Session = Depends(get_db)
+):
+    """Verifies a user's email address using a 6-digit confirmation code."""
+    service = AuthService(db)
+    service.verify_email(data.email, data.code)
+    return BaseResponse(data="Email successfully verified")
+
+@router.post("/resend-code", response_model=BaseResponse[str])
+def resend_code(
+    data: ResendCodeRequest,
+    db: Session = Depends(get_db)
+):
+    """Resends a verification email code."""
+    service = AuthService(db)
+    service.resend_verification_code(data.email)
+    return BaseResponse(data="Code successfully resent")
 

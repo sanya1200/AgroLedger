@@ -36,6 +36,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<AuthVerifyUserRequested>(_onVerifyUserRequested);
     on<AuthSessionExpired>(_onSessionExpired);
     on<AuthGoogleSignInRequested>(_onGoogleSignInRequested);
+    on<AuthVerifyEmailRequested>(_onVerifyEmailRequested);
+    on<AuthResendCodeRequested>(_onResendCodeRequested);
+    on<AuthClearVerificationEmail>((event, emit) {
+      emit(state.copyWith(clearVerificationEmail: true));
+    });
   }
 
   Future<void> _onUpdateSettingsRequested(
@@ -183,10 +188,17 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
       emit(state.copyWith(status: AuthStatus.authenticated, user: user));
     } catch (e) {
-      emit(state.copyWith(
-        status: AuthStatus.failure,
-        errorMessage: e.toString(),
-      ));
+      if (e.toString().contains('EMAIL_NOT_VERIFIED')) {
+        emit(state.copyWith(
+          status: AuthStatus.failure,
+          needsVerificationEmail: event.email,
+        ));
+      } else {
+        emit(state.copyWith(
+          status: AuthStatus.failure,
+          errorMessage: e.toString(),
+        ));
+      }
     }
   }
 
@@ -214,10 +226,17 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
       emit(state.copyWith(status: AuthStatus.authenticated, user: user));
     } catch (e) {
-      emit(state.copyWith(
-        status: AuthStatus.failure,
-        errorMessage: e.toString(),
-      ));
+      if (e.toString().contains('EMAIL_NOT_VERIFIED')) {
+        emit(state.copyWith(
+          status: AuthStatus.failure,
+          needsVerificationEmail: event.email,
+        ));
+      } else {
+        emit(state.copyWith(
+          status: AuthStatus.failure,
+          errorMessage: e.toString(),
+        ));
+      }
     }
   }
 
@@ -314,6 +333,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         fullName: event.fullName,
         phone: event.phone,
         role: event.role,
+        idToken: event.idToken,
       );
 
       // Cache user profile
@@ -328,6 +348,41 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     } catch (e) {
       emit(state.copyWith(
         status: AuthStatus.failure,
+        errorMessage: e.toString(),
+      ));
+    }
+  }
+
+  Future<void> _onVerifyEmailRequested(
+    AuthVerifyEmailRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(state.copyWith(isVerificationLoading: true, errorMessage: null));
+    try {
+      await _authRemoteDataSource.verifyEmail(event.email, event.code);
+      emit(state.copyWith(
+        isVerificationLoading: false,
+        clearVerificationEmail: true,
+      ));
+    } catch (e) {
+      emit(state.copyWith(
+        isVerificationLoading: false,
+        errorMessage: e.toString(),
+      ));
+    }
+  }
+
+  Future<void> _onResendCodeRequested(
+    AuthResendCodeRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(state.copyWith(isVerificationLoading: true, errorMessage: null));
+    try {
+      await _authRemoteDataSource.resendVerificationCode(event.email);
+      emit(state.copyWith(isVerificationLoading: false));
+    } catch (e) {
+      emit(state.copyWith(
+        isVerificationLoading: false,
         errorMessage: e.toString(),
       ));
     }

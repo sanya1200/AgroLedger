@@ -6,6 +6,7 @@ import 'package:agroledger/core/theme/app_colors.dart';
 import 'package:agroledger/core/theme/app_text_styles.dart';
 import 'package:agroledger/core/presentation/widgets/soft_card.dart';
 import 'register_screen.dart';
+import 'email_verification_screen.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:agroledger/features/auth/presentation/widgets/google_sign_in_button.dart';
 import 'package:agroledger/features/auth/presentation/widgets/google_registration_completion_dialog.dart';
@@ -25,6 +26,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isGoogleAction = false;
   String? _googleEmail;
   String? _googleName;
+  String? _googleIdToken;
 
   @override
   void dispose() {
@@ -67,10 +69,13 @@ class _LoginScreenState extends State<LoginScreen> {
 
       final email = account.email;
       final name = account.displayName ?? 'Google User';
+      final googleAuth = await account.authentication;
+      final idToken = googleAuth.idToken;
 
       setState(() {
         _googleEmail = email;
         _googleName = name;
+        _googleIdToken = idToken;
       });
 
       if (mounted) {
@@ -78,6 +83,7 @@ class _LoginScreenState extends State<LoginScreen> {
               AuthGoogleSignInRequested(
                 email: email,
                 fullName: name,
+                idToken: idToken,
               ),
             );
       }
@@ -138,12 +144,14 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() {
       _googleEmail = email;
       _googleName = name;
+      _googleIdToken = 'mock_debug_token';
       _isGoogleAction = true;
     });
     context.read<AuthBloc>().add(
           const AuthGoogleSignInRequested(
             email: email,
             fullName: name,
+            idToken: 'mock_debug_token',
           ),
         );
   }
@@ -165,6 +173,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 fullName: _googleName!,
                 phone: phone,
                 role: role,
+                idToken: _googleIdToken,
               ),
             );
       }
@@ -173,6 +182,7 @@ class _LoginScreenState extends State<LoginScreen> {
         _isGoogleAction = false;
         _googleEmail = null;
         _googleName = null;
+        _googleIdToken = null;
       });
     }
   }
@@ -182,6 +192,20 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       body: BlocListener<AuthBloc, AuthState>(
         listener: (context, state) {
+          if (state.needsVerificationEmail != null) {
+            final email = state.needsVerificationEmail!;
+            context.read<AuthBloc>().add(AuthClearVerificationEmail());
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => EmailVerificationScreen(email: email),
+              ),
+            ).then((verified) {
+              if (verified == true) {
+                _onLogin();
+              }
+            });
+            return;
+          }
           if (state.status == AuthStatus.failure && state.errorMessage != null) {
             if (state.errorMessage == "GOOGLE_REGISTRATION_REQUIRED" && _isGoogleAction && _googleEmail != null) {
               _showRegistrationCompletionDialog();
@@ -199,6 +223,7 @@ class _LoginScreenState extends State<LoginScreen> {
               _isGoogleAction = false;
               _googleEmail = null;
               _googleName = null;
+              _googleIdToken = null;
             });
           }
         },
