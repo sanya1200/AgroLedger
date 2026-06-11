@@ -9,7 +9,7 @@ abstract class AuthRemoteDataSource {
   Future<UserModel> register({
     required String email,
     required String password,
-    required String phone,
+    String? phone,
     required String role,
     String? fullName,
   });
@@ -80,7 +80,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   Future<UserModel> register({
     required String email,
     required String password,
-    required String phone,
+    String? phone,
     required String role,
     String? fullName,
   }) async {
@@ -90,7 +90,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         data: {
           'email': email,
           'password': password,
-          'phone': phone,
+          if (phone != null && phone.isNotEmpty) 'phone': phone,
           'role': role,
           'full_name': fullName ?? '',
         },

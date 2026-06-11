@@ -9,7 +9,6 @@ import 'register_screen.dart';
 import 'email_verification_screen.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:agroledger/features/auth/presentation/widgets/google_sign_in_button.dart';
-import 'package:agroledger/features/auth/presentation/widgets/google_registration_completion_dialog.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -24,9 +23,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
 
   bool _isGoogleAction = false;
-  String? _googleEmail;
-  String? _googleName;
-  String? _googleIdToken;
 
   @override
   void dispose() {
@@ -71,12 +67,6 @@ class _LoginScreenState extends State<LoginScreen> {
       final name = account.displayName ?? 'Google User';
       final googleAuth = await account.authentication;
       final idToken = googleAuth.idToken;
-
-      setState(() {
-        _googleEmail = email;
-        _googleName = name;
-        _googleIdToken = idToken;
-      });
 
       if (mounted) {
         context.read<AuthBloc>().add(
@@ -142,9 +132,6 @@ class _LoginScreenState extends State<LoginScreen> {
     const email = 'test.agro.farmer@gmail.com';
     const name = 'Алексей Фермер';
     setState(() {
-      _googleEmail = email;
-      _googleName = name;
-      _googleIdToken = 'mock_debug_token';
       _isGoogleAction = true;
     });
     context.read<AuthBloc>().add(
@@ -154,37 +141,6 @@ class _LoginScreenState extends State<LoginScreen> {
             idToken: 'mock_debug_token',
           ),
         );
-  }
-
-  Future<void> _showRegistrationCompletionDialog() async {
-    final result = await showDialog<Map<String, String>>(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => GoogleRegistrationCompletionDialog(email: _googleEmail!),
-    );
-
-    if (result != null) {
-      final phone = result['phone']!;
-      final role = result['role']!;
-      if (mounted) {
-        context.read<AuthBloc>().add(
-              AuthGoogleSignInRequested(
-                email: _googleEmail!,
-                fullName: _googleName!,
-                phone: phone,
-                role: role,
-                idToken: _googleIdToken,
-              ),
-            );
-      }
-    } else {
-      setState(() {
-        _isGoogleAction = false;
-        _googleEmail = null;
-        _googleName = null;
-        _googleIdToken = null;
-      });
-    }
   }
 
   @override
@@ -207,23 +163,16 @@ class _LoginScreenState extends State<LoginScreen> {
             return;
           }
           if (state.status == AuthStatus.failure && state.errorMessage != null) {
-            if (state.errorMessage == "GOOGLE_REGISTRATION_REQUIRED" && _isGoogleAction && _googleEmail != null) {
-              _showRegistrationCompletionDialog();
-            } else {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(state.errorMessage!),
-                  backgroundColor: AppColors.errorSoft,
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            }
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.errorMessage!),
+                backgroundColor: AppColors.errorSoft,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
           } else if (state.status == AuthStatus.authenticated || state.status == AuthStatus.authorized) {
             setState(() {
               _isGoogleAction = false;
-              _googleEmail = null;
-              _googleName = null;
-              _googleIdToken = null;
             });
           }
         },
@@ -262,9 +211,16 @@ class _LoginScreenState extends State<LoginScreen> {
                         const SizedBox(height: 24),
                         AnimatedInputField(
                           controller: _emailController,
-                          label: 'Email или Телефон',
-                          prefixIcon: Icons.person_outline_rounded,
-                          validator: (v) => (v == null || v.isEmpty) ? 'Введите данные' : null,
+                          label: 'Email',
+                          prefixIcon: Icons.email_outlined,
+                          keyboardType: TextInputType.emailAddress,
+                          validator: (v) {
+                            if (v == null || v.isEmpty) return 'Введите email';
+                            if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(v)) {
+                              return 'Некорректный email';
+                            }
+                            return null;
+                          },
                         ),
                         const SizedBox(height: 16),
                         AnimatedInputField(

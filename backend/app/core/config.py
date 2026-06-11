@@ -1,3 +1,4 @@
+from typing import Optional
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field
 
@@ -20,6 +21,13 @@ class Settings(BaseSettings):
 
     # Database
     DATABASE_URL: str = Field(..., alias="DATABASE_URL")
+
+    # SMTP Settings
+    SMTP_HOST: Optional[str] = None
+    SMTP_PORT: Optional[int] = 587
+    SMTP_USER: Optional[str] = None
+    SMTP_PASSWORD: Optional[str] = None
+    SMTP_FROM: Optional[str] = None
 
     @property
     def sqlalchemy_database_url(self) -> str:

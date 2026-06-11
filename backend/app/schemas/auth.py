@@ -13,8 +13,8 @@ class BaseResponse(BaseModel, Generic[T]):
 
 class SignUpRequest(BaseModel):
     email: EmailStr
-    phone: str = Field(..., description="Phone in international format, e.g. +77001234567")
     password: str = Field(..., min_length=8)
+    phone: Optional[str] = Field(None, description="Phone in international format, e.g. +77001234567")
     full_name: Optional[str] = None
     role: Optional[str] = "farmer_business"
 
@@ -29,8 +29,8 @@ class SignUpRequest(BaseModel):
 
     @field_validator("phone")
     @classmethod
-    def validate_phone(cls, v: str) -> str:
-        if not re.match(r'^\+?[1-9]\d{1,14}$', v):
+    def validate_phone(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and not re.match(r'^\+?[1-9]\d{1,14}$', v):
             raise ValueError("Invalid phone format")
         return v
 
@@ -65,7 +65,7 @@ class UserDetailResponse(BaseModel):
 
     id: int
     email: EmailStr
-    phone: str
+    phone: Optional[str] = None
     full_name: Optional[str] = None
     role: str
     is_biometric_enabled: bool = False

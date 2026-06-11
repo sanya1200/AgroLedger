@@ -7,7 +7,6 @@ import 'package:agroledger/core/theme/app_text_styles.dart';
 import 'package:agroledger/core/presentation/widgets/soft_card.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:agroledger/features/auth/presentation/widgets/google_sign_in_button.dart';
-import 'package:agroledger/features/auth/presentation/widgets/google_registration_completion_dialog.dart';
 import 'email_verification_screen.dart';
 import 'package:agroledger/features/auth/presentation/widgets/password_strength_indicator.dart';
 
@@ -22,13 +21,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
-  final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
 
   bool _isGoogleAction = false;
-  String? _googleEmail;
-  String? _googleName;
-  String? _googleIdToken;
 
   @override
   void initState() {
@@ -45,7 +40,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _passwordController.removeListener(_onPasswordChanged);
     _nameController.dispose();
     _emailController.dispose();
-    _phoneController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -59,7 +53,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
             AuthRegisterRequested(
               email: _emailController.text.trim(),
               password: _passwordController.text.trim(),
-              phone: _phoneController.text.trim(),
               role: 'farmer_business', // Default role for universal access
               fullName: _nameController.text.trim(),
             ),
@@ -89,12 +82,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
       final name = account.displayName ?? 'Google User';
       final googleAuth = await account.authentication;
       final idToken = googleAuth.idToken;
-
-      setState(() {
-        _googleEmail = email;
-        _googleName = name;
-        _googleIdToken = idToken;
-      });
 
       if (mounted) {
         context.read<AuthBloc>().add(
@@ -160,9 +147,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     const email = 'test.agro.farmer@gmail.com';
     const name = 'Алексей Фермер';
     setState(() {
-      _googleEmail = email;
-      _googleName = name;
-      _googleIdToken = 'mock_debug_token';
       _isGoogleAction = true;
     });
     context.read<AuthBloc>().add(
@@ -172,37 +156,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
             idToken: 'mock_debug_token',
           ),
         );
-  }
-
-  Future<void> _showRegistrationCompletionDialog() async {
-    final result = await showDialog<Map<String, String>>(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => GoogleRegistrationCompletionDialog(email: _googleEmail!),
-    );
-
-    if (result != null) {
-      final phone = result['phone']!;
-      final role = result['role']!;
-      if (mounted) {
-        context.read<AuthBloc>().add(
-              AuthGoogleSignInRequested(
-                email: _googleEmail!,
-                fullName: _googleName!,
-                phone: phone,
-                role: role,
-                idToken: _googleIdToken,
-              ),
-            );
-      }
-    } else {
-      setState(() {
-        _isGoogleAction = false;
-        _googleEmail = null;
-        _googleName = null;
-        _googleIdToken = null;
-      });
-    }
   }
 
   @override
@@ -241,26 +194,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
           if (state.status == AuthStatus.authenticated || state.status == AuthStatus.authorized) {
             setState(() {
               _isGoogleAction = false;
-              _googleEmail = null;
-              _googleName = null;
-              _googleIdToken = null;
             });
             // After successful registration, we are now authenticated
             // The AuthFlowController will handle the switch to PIN screen
             Navigator.of(context).pop();
           }
           if (state.status == AuthStatus.failure && state.errorMessage != null) {
-            if (state.errorMessage == "GOOGLE_REGISTRATION_REQUIRED" && _isGoogleAction && _googleEmail != null) {
-              _showRegistrationCompletionDialog();
-            } else {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(state.errorMessage!),
-                  backgroundColor: AppColors.errorSoft,
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            }
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.errorMessage!),
+                backgroundColor: AppColors.errorSoft,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
           }
         },
         child: SingleChildScrollView(
@@ -295,14 +241,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           }
                           return null;
                         },
-                      ),
-                      const SizedBox(height: 16),
-                      AnimatedInputField(
-                        controller: _phoneController,
-                        label: 'Телефон',
-                        prefixIcon: Icons.phone_android_outlined,
-                        keyboardType: TextInputType.phone,
-                        validator: (v) => (v == null || v.isEmpty) ? 'Введите телефон' : null,
                       ),
                       const SizedBox(height: 16),
                       AnimatedInputField(

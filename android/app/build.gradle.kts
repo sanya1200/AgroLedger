@@ -29,7 +29,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.agroledger.app"
+        applicationId = "com.example.agroledger"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = (properties["flutter-version-code"] as String?)?.toInt() ?: 1

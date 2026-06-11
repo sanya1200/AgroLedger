@@ -23,7 +23,7 @@ class AuthService:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="User with this email already exists"
             )
-        if self.repo.get_user_by_identity(data.phone):
+        if data.phone and self.repo.get_user_by_identity(data.phone):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="User with this phone number already exists"
@@ -44,6 +44,7 @@ class AuthService:
             # Generate verification code
             import random
             from app.models.user import VerificationCode
+            from app.services.email_service import send_verification_email
             code = f"{random.randint(100000, 999999)}"
             expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
 
@@ -55,7 +56,7 @@ class AuthService:
             self.repo.db.add(verification_entry)
             self.repo.db.commit()
 
-            logger.info(f"\n========================================\nVERIFICATION CODE for {user.email}: {code}\n========================================\n")
+            send_verification_email(user.email, code)
             return user
         except Exception as e:
             logger.error(f"Error creating user in DB: {e}")
@@ -213,13 +214,9 @@ class AuthService:
         user = self.repo.get_user_by_identity(email)
         
         if not user:
-            if not data.phone or not data.role:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="GOOGLE_REGISTRATION_REQUIRED"
-                )
+            role = data.role or "farmer_business"
             
-            if self.repo.get_user_by_identity(data.phone):
+            if data.phone and self.repo.get_user_by_identity(data.phone):
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="User with this phone number already exists"
@@ -232,7 +229,7 @@ class AuthService:
                 phone=data.phone,
                 full_name=data.full_name,
                 hashed_password=get_password_hash(random_pwd),
-                role=str(data.role),
+                role=str(role),
                 is_verified=True,
                 created_at=datetime.now(timezone.utc)
             )
@@ -311,9 +308,9 @@ class AuthService:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Email уже подтвержден"
             )
-            
         import random
         from app.models.user import VerificationCode
+        from app.services.email_service import send_verification_email
         
         # Invalidate past codes
         self.repo.db.query(VerificationCode).filter(VerificationCode.email == email).delete()
@@ -329,5 +326,5 @@ class AuthService:
         self.repo.db.add(verification_entry)
         self.repo.db.commit()
         
-        logger.info(f"\n========================================\nVERIFICATION CODE (RESENT) for {email}: {code}\n========================================\n")
+        send_verification_email(email, code)
 
