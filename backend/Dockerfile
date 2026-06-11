@@ -6,13 +6,6 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    libpq-dev \
-    gcc \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
 # Создаем виртуальное окружение и устанавливаем зависимости
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
