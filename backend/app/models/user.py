@@ -30,6 +30,7 @@ class User(Base):
 
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     is_verified: Mapped[bool] = mapped_column(Boolean, default=False)
+    fcm_token: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     created_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=True)
 
     sessions: Mapped[List["UserSession"]] = relationship("UserSession", back_populates="user", cascade="all, delete-orphan")
@@ -78,4 +79,5 @@ class VerificationCode(Base):
     email: Mapped[str] = mapped_column(String(255), index=True, nullable=False)
     code: Mapped[str] = mapped_column(String(6), nullable=False)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    attempts: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)

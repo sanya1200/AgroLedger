@@ -40,6 +40,8 @@ dependencies:
   crypt: ^4.3.0
   device_info_plus: ^10.1.0
   google_sign_in: ^6.2.1
+  image_picker: ^1.2.2
+  cached_network_image: ^3.4.1
 
 dev_dependencies:
   flutter_test:

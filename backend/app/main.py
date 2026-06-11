@@ -6,6 +6,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.exceptions import RequestValidationError
 from sqlalchemy import text
+from slowapi.errors import RateLimitExceeded
+from slowapi import _rate_limit_exceeded_handler
+from app.core.rate_limiter import limiter
 
 from app.core.config import settings
 from app.core.database import engine, Base
@@ -21,6 +24,9 @@ import app.routers.business as business_mod
 import app.routers.calculator as calculator_mod
 import app.routers.marketplace as marketplace_mod
 import app.routers.calendar as calendar_mod
+import app.routers.legal as legal_mod
+import app.routers.ai as ai_mod
+import app.routers.upload as upload_mod
 
 logging.basicConfig(
     level=logging.INFO,
@@ -51,6 +57,7 @@ def run_migrations():
                 "premium_until": "TIMESTAMP WITH TIME ZONE",
                 "is_active": "BOOLEAN DEFAULT TRUE",
                 "is_verified": "BOOLEAN DEFAULT FALSE",
+                "fcm_token": "VARCHAR(255)",
                 "created_at": "TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP"
             }
 
@@ -188,9 +195,38 @@ def run_migrations():
                 except Exception as e:
                     logger.warning(f"Could not migrate user_sessions column {column}: {e}")
 
+            verification_columns = {
+                "attempts": "INTEGER DEFAULT 0",
+            }
+            for column, col_type in verification_columns.items():
+                try:
+                    check_sql = text(
+                        f"SELECT column_name FROM information_schema.columns "
+                        f"WHERE table_name='verification_codes' AND column_name='{column}'"
+                    )
+                    if not conn.execute(check_sql).fetchone():
+                        logger.info(f"Adding column {column} to verification_codes table...")
+                        conn.execute(text(f"ALTER TABLE verification_codes ADD COLUMN {column} {col_type}"))
+                        conn.commit()
+                except Exception as e:
+                    logger.warning(f"Could not migrate column {column} in verification_codes: {e}")
+
             logger.info("Migrations completed.")
     except Exception as e:
         logger.error(f"Migration process failed: {e}")
+
+from apscheduler.schedulers.background import BackgroundScheduler
+from app.services.push_service import check_upcoming_tasks
+from app.core.database import SessionLocal
+
+scheduler = BackgroundScheduler()
+
+def job_check_upcoming_tasks():
+    db = SessionLocal()
+    try:
+        check_upcoming_tasks(db)
+    finally:
+        db.close()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -201,8 +237,14 @@ async def lifespan(app: FastAPI):
         logger.info("Database initialized successfully.")
     except Exception as e:
         logger.error(f"Failed to initialize database: {e}")
+        
+    logger.info("Starting background tasks scheduler...")
+    scheduler.add_job(job_check_upcoming_tasks, 'interval', minutes=30)
+    scheduler.start()
+    
     yield
     logger.info("Shutting down system...")
+    scheduler.shutdown()
 
 app = FastAPI(
     title="AgroLedger Core API",
@@ -211,9 +253,18 @@ app = FastAPI(
     openapi_url=f"{settings.API_V1_STR}/openapi.json"
 )
 
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "https://agroledger.kz",
+        "https://agroledger-zlxo.onrender.com",
+        "http://localhost",
+        "http://localhost:8000",
+        "http://localhost:3000"
+    ],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=DEVICE_HEADERS,
@@ -228,6 +279,9 @@ app.include_router(business_mod.router, prefix=f"{settings.API_V1_STR}/business"
 app.include_router(calculator_mod.router, prefix=f"{settings.API_V1_STR}/calculator", tags=["Calculations"])
 app.include_router(marketplace_mod.router, prefix=f"{settings.API_V1_STR}/marketplace", tags=["Marketplace"])
 app.include_router(calendar_mod.router, prefix=f"{settings.API_V1_STR}/calendar", tags=["Calendar"])
+app.include_router(legal_mod.router, prefix="/legal", tags=["Legal"])
+app.include_router(ai_mod.router, prefix=f"{settings.API_V1_STR}/ai", tags=["AI Consultant"])
+app.include_router(upload_mod.router, prefix=f"{settings.API_V1_STR}/upload", tags=["Media Upload"])
 
 @app.exception_handler(StarletteHTTPException)
 async def http_exception_handler(request: Request, exc: StarletteHTTPException):

@@ -9,11 +9,19 @@ abstract class MarketplaceEvent extends Equatable {
 
 class LoadProductsRequested extends MarketplaceEvent {
   final String? category;
+  final String? search;
+  final double? minPrice;
+  final double? maxPrice;
 
-  const LoadProductsRequested({this.category});
+  const LoadProductsRequested({
+    this.category,
+    this.search,
+    this.minPrice,
+    this.maxPrice,
+  });
 
   @override
-  List<Object?> get props => [category];
+  List<Object?> get props => [category, search, minPrice, maxPrice];
 }
 
 class CreateProductRequested extends MarketplaceEvent {

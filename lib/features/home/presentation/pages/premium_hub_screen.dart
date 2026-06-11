@@ -250,6 +250,29 @@ class _PremiumHubScreenState extends State<PremiumHubScreen> {
                 ),
               ] else ...[
                 // Tariff selection
+                // In Development Warning
+                Container(
+                  margin: const EdgeInsets.only(bottom: 24),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.errorSoft.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.errorSoft.withValues(alpha: 0.5)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.info_outline, color: AppColors.errorSoft),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Модуль подписок находится в разработке. Оплата в данный момент происходит в тестовом режиме.',
+                          style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 12),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Tariff selection
                 Text(
                   'Выберите подходящий тариф:',
                   style: AppTextStyles.bodyMedium.copyWith(

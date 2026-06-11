@@ -18,7 +18,12 @@ class MarketplaceBloc extends Bloc<MarketplaceEvent, MarketplaceState> {
   ) async {
     emit(MarketplaceLoading());
     try {
-      final products = await _dataSource.getProducts(category: event.category);
+      final products = await _dataSource.getProducts(
+        category: event.category,
+        search: event.search,
+        minPrice: event.minPrice,
+        maxPrice: event.maxPrice,
+      );
       emit(ProductsLoadSuccess(products));
     } catch (e) {
       emit(MarketplaceFailure(e.toString()));

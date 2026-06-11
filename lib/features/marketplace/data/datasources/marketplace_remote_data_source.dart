@@ -4,9 +4,15 @@ import 'package:agroledger/core/network/error_handler.dart';
 import 'package:agroledger/features/marketplace/data/models/product_model.dart';
 
 abstract class MarketplaceRemoteDataSource {
-  Future<List<ProductModel>> getProducts({String? category});
+  Future<List<ProductModel>> getProducts({
+    String? category,
+    String? search,
+    double? minPrice,
+    double? maxPrice,
+  });
   Future<ProductModel> createProduct(Map<String, dynamic> productData);
   Future<void> deleteProduct(int productId);
+  Future<String?> uploadImage(String filePath);
 }
 
 class MarketplaceRemoteDataSourceImpl implements MarketplaceRemoteDataSource {
@@ -25,11 +31,22 @@ class MarketplaceRemoteDataSourceImpl implements MarketplaceRemoteDataSource {
   }
 
   @override
-  Future<List<ProductModel>> getProducts({String? category}) async {
+  Future<List<ProductModel>> getProducts({
+    String? category,
+    String? search,
+    double? minPrice,
+    double? maxPrice,
+  }) async {
     try {
+      final queryParams = <String, dynamic>{};
+      if (category != null) queryParams['category'] = category;
+      if (search != null && search.isNotEmpty) queryParams['search'] = search;
+      if (minPrice != null) queryParams['min_price'] = minPrice;
+      if (maxPrice != null) queryParams['max_price'] = maxPrice;
+
       final response = await _client.dio.get(
         'marketplace/products',
-        queryParameters: category != null ? {'category': category} : null,
+        queryParameters: queryParams.isNotEmpty ? queryParams : null,
       );
       final data = _unwrap(response.data);
       return (data as List)
@@ -65,6 +82,21 @@ class MarketplaceRemoteDataSourceImpl implements MarketplaceRemoteDataSource {
       _unwrap(response.data);
     } on DioException catch (e) {
       throw handleDioError(e, 'Ошибка удаления товара');
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  @override
+  Future<String?> uploadImage(String filePath) async {
+    try {
+      final formData = FormData.fromMap({
+        'file': await MultipartFile.fromFile(filePath),
+      });
+      final response = await _client.dio.post('upload/image', data: formData);
+      return response.data['url'] as String?;
+    } on DioException catch (e) {
+      throw handleDioError(e, 'Ошибка загрузки фото');
     } catch (e) {
       rethrow;
     }

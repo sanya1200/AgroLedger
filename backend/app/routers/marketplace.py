@@ -15,6 +15,9 @@ router = APIRouter()
 @router.get("/products", response_model=BaseResponse[List[ProductResponse]])
 def list_products(
     category: Optional[ProductCategory] = Query(None),
+    search: Optional[str] = Query(None, description="Search term for title and description"),
+    min_price: Optional[float] = Query(None, ge=0),
+    max_price: Optional[float] = Query(None, ge=0),
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db)
@@ -23,7 +26,14 @@ def list_products(
     Публичный каталог товаров. Доступен без авторизации.
     """
     service = MarketplaceService(db)
-    products = service.get_catalog(category, skip, limit)
+    products = service.get_catalog(
+        category=category,
+        search=search,
+        min_price=min_price,
+        max_price=max_price,
+        skip=skip,
+        limit=limit
+    )
     return BaseResponse(data=products)
 
 

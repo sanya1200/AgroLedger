@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:agroledger/core/theme/app_colors.dart';
 import 'package:agroledger/core/theme/app_text_styles.dart';
+import 'package:agroledger/core/di/service_locator.dart';
+import 'package:agroledger/features/home/data/datasources/ai_remote_data_source.dart';
 
 class Message {
   final String text;
@@ -60,7 +62,7 @@ class _AIConsultantScreenState extends State<AIConsultantScreen> {
     });
   }
 
-  void _sendMessage(String text) {
+  Future<void> _sendMessage(String text) async {
     if (text.trim().isEmpty) return;
 
     setState(() {
@@ -70,18 +72,23 @@ class _AIConsultantScreenState extends State<AIConsultantScreen> {
     _controller.clear();
     _scrollToBottom();
 
-    // Simulate AI response
-    Timer(const Duration(seconds: 2), () {
+    try {
+      final aiResponse = await sl<AiRemoteDataSource>().consultAi(text);
       if (!mounted) return;
-      
-      String aiResponse = _getPresetResponse(text);
       
       setState(() {
         _messages.add(Message(text: aiResponse, isUser: false, time: DateTime.now()));
         _isTyping = false;
       });
       _scrollToBottom();
-    });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _messages.add(Message(text: 'Извините, произошла ошибка: $e', isUser: false, time: DateTime.now()));
+        _isTyping = false;
+      });
+      _scrollToBottom();
+    }
   }
 
   String _getPresetResponse(String query) {
@@ -196,6 +203,16 @@ class _AIConsultantScreenState extends State<AIConsultantScreen> {
                   },
                 ),
               ),
+
+            // Disclaimer
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Text(
+                'Внимание: Ответы ИИ носят справочный характер и не заменяют профессиональную ветеринарную помощь.',
+                style: AppTextStyles.caption.copyWith(fontSize: 10, color: AppColors.errorSoft),
+                textAlign: TextAlign.center,
+              ),
+            ),
 
             // Input Bar
             Padding(

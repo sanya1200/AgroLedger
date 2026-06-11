@@ -10,8 +10,8 @@ class HelpSupportScreen extends StatelessWidget {
   // Example links - in a real app these should come from config
   static const String _supportEmail = 'support@agroledger.kz';
   static const String _supportTelegram = 'https://t.me/agroledger_support';
-  static const String _privacyPolicyUrl = 'https://agroledger.kz/privacy';
-  static const String _termsOfServiceUrl = 'https://agroledger.kz/terms';
+  static const String _privacyPolicyUrl = 'https://agroledger-zlxo.onrender.com/legal/privacy';
+  static const String _termsOfServiceUrl = 'https://agroledger-zlxo.onrender.com/legal/terms';
 
   Future<void> _launchUrl(String url) async {
     final uri = Uri.parse(url);
@@ -106,7 +106,7 @@ class HelpSupportScreen extends StatelessWidget {
                   const Divider(height: 1),
                   _LegalTile(
                     title: 'Правила торговли на платформе',
-                    onTap: () => {},
+                    onTap: () => _launchUrl('https://agroledger-zlxo.onrender.com/legal/trade'),
                   ),
                 ],
               ),

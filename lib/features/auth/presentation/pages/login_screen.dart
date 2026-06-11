@@ -102,45 +102,18 @@ class _LoginScreenState extends State<LoginScreen> {
                   'Детали ошибки:\n$errorString',
                   style: AppTextStyles.caption.copyWith(color: AppColors.errorSoft, fontWeight: FontWeight.bold),
                 ),
-                const Divider(height: 24),
-                Text(
-                  'Хотите использовать отладочный вход с тестовым аккаунтом?',
-                  style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold),
-                ),
               ],
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Отмена'),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  _useFallbackSignIn();
-                },
-                child: const Text('Вход без SDK'),
+                child: const Text('Закрыть'),
               ),
             ],
           ),
         );
       }
     }
-  }
-
-  void _useFallbackSignIn() {
-    const email = 'test.agro.farmer@gmail.com';
-    const name = 'Алексей Фермер';
-    setState(() {
-      _isGoogleAction = true;
-    });
-    context.read<AuthBloc>().add(
-          const AuthGoogleSignInRequested(
-            email: email,
-            fullName: name,
-            idToken: 'mock_debug_token',
-          ),
-        );
   }
 
   @override

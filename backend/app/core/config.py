@@ -29,6 +29,10 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: Optional[str] = None
     SMTP_FROM: Optional[str] = None
 
+    # External APIs
+    GEMINI_API_KEY: Optional[str] = None
+    CLOUDINARY_URL: Optional[str] = None
+
     @property
     def sqlalchemy_database_url(self) -> str:
         if self.DATABASE_URL.startswith("postgres://"):

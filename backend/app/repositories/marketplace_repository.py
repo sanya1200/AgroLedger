@@ -1,5 +1,6 @@
 from typing import List, Optional
 from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import or_
 from app.models.marketplace import Product, ProductCategory
 from app.models.business_profile import BusinessProfile
 from app.models.user import User
@@ -33,14 +34,34 @@ class MarketplaceRepository:
     def get_all_active_products(
         self,
         category: Optional[ProductCategory] = None,
+        search: Optional[str] = None,
+        min_price: Optional[float] = None,
+        max_price: Optional[float] = None,
         skip: int = 0,
         limit: int = 100
     ) -> List[Product]:
         query = self.db.query(Product).options(
             joinedload(Product.business).joinedload(BusinessProfile.user)
         ).filter(Product.is_active == True)
+        
         if category:
             query = query.filter(Product.category == category)
+        
+        if search:
+            search_term = f"%{search}%"
+            query = query.filter(
+                or_(
+                    Product.title.ilike(search_term),
+                    Product.description.ilike(search_term)
+                )
+            )
+            
+        if min_price is not None:
+            query = query.filter(Product.price >= min_price)
+            
+        if max_price is not None:
+            query = query.filter(Product.price <= max_price)
+            
         return query.offset(skip).limit(limit).all()
 
     def get_products_by_business(self, business_id: int) -> List[Product]:

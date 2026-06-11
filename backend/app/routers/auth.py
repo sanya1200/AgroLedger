@@ -8,17 +8,20 @@ from app.schemas.auth import BaseResponse, SignUpRequest, SignInRequest, TokenRe
 from app.services.auth_service import AuthService
 from app.core.security import get_password_hash
 from app.repositories.user_repository import UserRepository
+from app.core.rate_limiter import limiter
 
 router = APIRouter()
 
 @router.post("/signup", response_model=BaseResponse[UserDetailResponse], status_code=status.HTTP_201_CREATED)
-def signup(data: SignUpRequest, db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+def signup(data: SignUpRequest, request: Request, db: Session = Depends(get_db)):
     """Handles new user registration."""
     service = AuthService(db)
     user = service.register(data)
     return BaseResponse(data=UserDetailResponse.model_validate(user))
 
 @router.post("/signin", response_model=BaseResponse[TokenResponse])
+@limiter.limit("10/minute")
 def signin(
     data: SignInRequest,
     request: Request,
@@ -159,8 +162,10 @@ def google_signin(
     return BaseResponse(data=tokens)
 
 @router.post("/verify-email", response_model=BaseResponse[str])
+@limiter.limit("5/minute")
 def verify_email(
     data: VerifyEmailRequest,
+    request: Request,
     db: Session = Depends(get_db)
 ):
     """Verifies a user's email address using a 6-digit confirmation code."""
@@ -169,8 +174,10 @@ def verify_email(
     return BaseResponse(data="Email successfully verified")
 
 @router.post("/resend-code", response_model=BaseResponse[str])
+@limiter.limit("3/minute")
 def resend_code(
     data: ResendCodeRequest,
+    request: Request,
     db: Session = Depends(get_db)
 ):
     """Resends a verification email code."""
@@ -178,31 +185,19 @@ def resend_code(
     service.resend_verification_code(data.email)
     return BaseResponse(data="Code successfully resent")
 
-@router.post("/clear-db-temp-98712", response_model=BaseResponse[str])
-def clear_db_temp(db: Session = Depends(get_db)):
-    """Temporary endpoint to clear all database tables for test resetting."""
-    from sqlalchemy import text
-    tables = [
-        "verification_codes",
-        "user_sessions",
-        "livestock_yields",
-        "livestock_expenses",
-        "livestock_tasks",
-        "products",
-        "livestock_assets",
-        "business_profiles",
-        "users"
-    ]
-    for table in tables:
-        try:
-            db.execute(text(f"TRUNCATE TABLE {table} RESTART IDENTITY CASCADE;"))
-        except Exception:
-            db.rollback()
-            try:
-                db.execute(text(f"DELETE FROM {table};"))
-            except Exception as e:
-                db.rollback()
-                raise HTTPException(status_code=500, detail=f"Failed to clear table {table}: {str(e)}")
+from pydantic import BaseModel
+class FcmTokenRequest(BaseModel):
+    fcm_token: str
+
+@router.patch("/fcm-token", response_model=BaseResponse[str])
+def update_fcm_token(
+    data: FcmTokenRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Updates the FCM token for the current user."""
+    current_user.fcm_token = data.fcm_token
     db.commit()
-    return BaseResponse(data="Database successfully cleared")
+    return BaseResponse(data="FCM token successfully updated")
+
 

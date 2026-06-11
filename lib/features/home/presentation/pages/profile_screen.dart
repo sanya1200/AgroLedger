@@ -239,27 +239,51 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _showDeleteAccountDialog() {
+    bool confirmDelete = false;
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.creamBackground,
-        title: const Text('Удаление аккаунта'),
-        content: const Text(
-          'Вы уверены, что хотите полностью удалить свой аккаунт? Все ваши данные, включая записи в калькуляторе и товары на маркете, будут удалены безвозвратно.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Отмена'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              context.read<AuthBloc>().add(AuthDeleteAccountRequested());
-            },
-            child: const Text('Удалить', style: TextStyle(color: AppColors.errorSoft)),
-          ),
-        ],
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          return AlertDialog(
+            backgroundColor: AppColors.creamBackground,
+            title: const Text('Удаление аккаунта'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Вы уверены, что хотите полностью удалить свой аккаунт? Все ваши данные, включая записи в калькуляторе и товары на маркете, будут удалены безвозвратно.',
+                ),
+                const SizedBox(height: 16),
+                CheckboxListTile(
+                  value: confirmDelete,
+                  onChanged: (val) => setState(() => confirmDelete = val ?? false),
+                  title: Text(
+                    'Я понимаю, что мои данные будут безвозвратно удалены',
+                    style: AppTextStyles.caption.copyWith(color: AppColors.errorSoft),
+                  ),
+                  controlAffinity: ListTileControlAffinity.leading,
+                  contentPadding: EdgeInsets.zero,
+                  activeColor: AppColors.errorSoft,
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Отмена'),
+              ),
+              TextButton(
+                onPressed: confirmDelete
+                    ? () {
+                        Navigator.pop(context);
+                        context.read<AuthBloc>().add(AuthDeleteAccountRequested());
+                      }
+                    : null,
+                child: Text('Удалить', style: TextStyle(color: confirmDelete ? AppColors.errorSoft : AppColors.textLight)),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

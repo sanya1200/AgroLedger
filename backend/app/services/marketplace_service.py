@@ -40,8 +40,23 @@ class MarketplaceService:
         business_id = self._get_business_id(user)
         return self.repository.create_product(business_id, product_in)
 
-    def get_catalog(self, category: Optional[ProductCategory], skip: int, limit: int):
-        return self.repository.get_all_active_products(category, skip, limit)
+    def get_catalog(
+        self,
+        category: Optional[ProductCategory],
+        search: Optional[str],
+        min_price: Optional[float],
+        max_price: Optional[float],
+        skip: int,
+        limit: int
+    ):
+        return self.repository.get_all_active_products(
+            category=category,
+            search=search,
+            min_price=min_price,
+            max_price=max_price,
+            skip=skip,
+            limit=limit
+        )
 
     def get_product(self, product_id: int):
         product = self.repository.get_product_by_id(product_id)

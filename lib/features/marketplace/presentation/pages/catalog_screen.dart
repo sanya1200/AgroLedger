@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:agroledger/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:agroledger/features/marketplace/presentation/bloc/marketplace_bloc.dart';
 import 'package:agroledger/features/marketplace/presentation/bloc/marketplace_event.dart';
@@ -21,6 +22,11 @@ class CatalogScreen extends StatefulWidget {
 
 class _CatalogScreenState extends State<CatalogScreen> {
   String? _selectedCategory;
+  bool _isSearching = false;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+  double? _minPrice;
+  double? _maxPrice;
   final List<Map<String, String>> _categories = [
     {'id': 'all', 'label': 'Все'},
     {'id': 'meat', 'label': 'Мясо'},
@@ -34,7 +40,16 @@ class _CatalogScreenState extends State<CatalogScreen> {
   @override
   void initState() {
     super.initState();
-    context.read<MarketplaceBloc>().add(const LoadProductsRequested());
+    _fetchProducts();
+  }
+
+  void _fetchProducts() {
+    context.read<MarketplaceBloc>().add(LoadProductsRequested(
+      category: _selectedCategory,
+      search: _searchQuery.isNotEmpty ? _searchQuery : null,
+      minPrice: _minPrice,
+      maxPrice: _maxPrice,
+    ));
   }
 
   void _onAddProductPressed(BuildContext context) {
@@ -85,12 +100,42 @@ class _CatalogScreenState extends State<CatalogScreen> {
     return Scaffold(
       backgroundColor: AppColors.creamBackground,
       appBar: AppBar(
-        title: const Text('Маркетплейс'),
-        centerTitle: true,
+        title: _isSearching
+            ? TextField(
+                controller: _searchController,
+                autofocus: true,
+                decoration: const InputDecoration(
+                  hintText: 'Поиск товаров...',
+                  border: InputBorder.none,
+                  hintStyle: TextStyle(color: Colors.black54),
+                ),
+                textInputAction: TextInputAction.search,
+                onSubmitted: (val) {
+                  setState(() => _searchQuery = val);
+                  _fetchProducts();
+                },
+              )
+            : const Text('Маркетплейс'),
+        centerTitle: !_isSearching,
         actions: [
           IconButton(
-            icon: const Icon(Icons.search_rounded),
-            onPressed: () {},
+            icon: Icon(_isSearching ? Icons.close : Icons.search_rounded),
+            onPressed: () {
+              setState(() {
+                if (_isSearching) {
+                  _isSearching = false;
+                  _searchQuery = '';
+                  _searchController.clear();
+                  _fetchProducts();
+                } else {
+                  _isSearching = true;
+                }
+              });
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.filter_list_rounded),
+            onPressed: _showFilterDialog,
           ),
         ],
       ),
@@ -125,7 +170,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
                   return RefreshIndicator(
                     color: AppColors.sagePrimary,
                     onRefresh: () async {
-                      context.read<MarketplaceBloc>().add(LoadProductsRequested(category: _selectedCategory));
+                      _fetchProducts();
                     },
                     child: _buildProductGrid(state.products),
                   );
@@ -177,9 +222,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
                 setState(() {
                   _selectedCategory = cat['id'] == 'all' ? null : cat['id'];
                 });
-                context.read<MarketplaceBloc>().add(
-                  LoadProductsRequested(category: _selectedCategory),
-                );
+                _fetchProducts();
               },
               selectedColor: AppColors.sagePrimary,
               backgroundColor: Colors.white,
@@ -239,6 +282,59 @@ class _CatalogScreenState extends State<CatalogScreen> {
       ),
     );
   }
+
+  void _showFilterDialog() {
+    final minController = TextEditingController(text: _minPrice?.toStringAsFixed(0) ?? '');
+    final maxController = TextEditingController(text: _maxPrice?.toStringAsFixed(0) ?? '');
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Фильтры'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: minController,
+                decoration: const InputDecoration(labelText: 'Мин. цена (₸)'),
+                keyboardType: TextInputType.number,
+              ),
+              TextField(
+                controller: maxController,
+                decoration: const InputDecoration(labelText: 'Макс. цена (₸)'),
+                keyboardType: TextInputType.number,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                setState(() {
+                  _minPrice = null;
+                  _maxPrice = null;
+                });
+                Navigator.pop(context);
+                _fetchProducts();
+              },
+              child: const Text('Сбросить'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                setState(() {
+                  _minPrice = double.tryParse(minController.text);
+                  _maxPrice = double.tryParse(maxController.text);
+                });
+                Navigator.pop(context);
+                _fetchProducts();
+              },
+              child: const Text('Применить'),
+            ),
+          ],
+        );
+      },
+    );
+  }
 }
 
 class _ProductCard extends StatelessWidget {
@@ -275,10 +371,11 @@ class _ProductCard extends StatelessWidget {
                     child: ClipRRect(
                       borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
                       child: product.imageUrl != null
-                          ? Image.network(
-                              product.imageUrl!,
+                          ? CachedNetworkImage(
+                              imageUrl: product.imageUrl!,
                               fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) => _buildImagePlaceholder(),
+                              placeholder: (context, url) => const Center(child: CircularProgressIndicator()),
+                              errorWidget: (context, url, error) => _buildImagePlaceholder(),
                             )
                           : _buildImagePlaceholder(),
                     ),

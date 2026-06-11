@@ -3,9 +3,13 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:agroledger/features/marketplace/presentation/bloc/marketplace_bloc.dart';
 import 'package:agroledger/features/marketplace/presentation/bloc/marketplace_event.dart';
 import 'package:agroledger/features/marketplace/presentation/bloc/marketplace_state.dart';
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
 import 'package:agroledger/core/theme/app_colors.dart';
 import 'package:agroledger/features/auth/presentation/widgets/animated_input_field.dart';
 import 'package:agroledger/core/presentation/widgets/soft_card.dart';
+import 'package:agroledger/core/di/service_locator.dart';
+import 'package:agroledger/features/marketplace/data/datasources/marketplace_remote_data_source.dart';
 
 class AddProductScreen extends StatefulWidget {
   const AddProductScreen({super.key});
@@ -22,6 +26,10 @@ class _AddProductScreenState extends State<AddProductScreen> {
   final _priceWholesaleController = TextEditingController();
   final _minQtyController = TextEditingController();
   final _stockController = TextEditingController();
+  
+  File? _imageFile;
+  bool _isUploadingImage = false;
+  String? _imageUrl;
   
   String _selectedCategory = 'meat';
   final List<Map<String, String>> _categories = [
@@ -42,6 +50,31 @@ class _AddProductScreenState extends State<AddProductScreen> {
     _minQtyController.dispose();
     _stockController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickAndUploadImage() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery, imageQuality: 70);
+    if (pickedFile != null) {
+      setState(() {
+        _imageFile = File(pickedFile.path);
+        _isUploadingImage = true;
+      });
+      try {
+        final url = await sl<MarketplaceRemoteDataSource>().uploadImage(pickedFile.path);
+        setState(() {
+          _imageUrl = url;
+        });
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+        }
+      } finally {
+        if (mounted) {
+          setState(() => _isUploadingImage = false);
+        }
+      }
+    }
   }
 
   @override
@@ -101,6 +134,34 @@ class _AddProductScreenState extends State<AddProductScreen> {
                           child: Text(c['label']!),
                         )).toList(),
                         onChanged: (v) => setState(() => _selectedCategory = v!),
+                      ),
+                      const SizedBox(height: 16),
+                      GestureDetector(
+                        onTap: _isUploadingImage ? null : _pickAndUploadImage,
+                        child: Container(
+                          height: 150,
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            color: AppColors.creamBackground.withValues(alpha: 0.5),
+                            borderRadius: BorderRadius.circular(15),
+                            border: Border.all(color: AppColors.sagePrimary.withValues(alpha: 0.3)),
+                          ),
+                          child: _isUploadingImage
+                              ? const Center(child: CircularProgressIndicator(color: AppColors.sagePrimary))
+                              : _imageFile != null
+                                  ? ClipRRect(
+                                      borderRadius: BorderRadius.circular(15),
+                                      child: Image.file(_imageFile!, fit: BoxFit.cover),
+                                    )
+                                  : const Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.add_photo_alternate_outlined, color: AppColors.sagePrimary, size: 40),
+                                        SizedBox(height: 8),
+                                        Text('Добавить фото', style: TextStyle(color: AppColors.sagePrimary)),
+                                      ],
+                                    ),
+                        ),
                       ),
                     ],
                   ),
@@ -192,6 +253,10 @@ class _AddProductScreenState extends State<AddProductScreen> {
         'price_retail': double.tryParse(_priceRetailController.text) ?? 0.0,
         'stock_quantity': double.tryParse(_stockController.text) ?? 0.0,
       };
+
+      if (_imageUrl != null) {
+        productData['image_url'] = _imageUrl;
+      }
 
       if (_priceWholesaleController.text.isNotEmpty) {
         productData['price_wholesale'] = double.tryParse(_priceWholesaleController.text) ?? 0.0;

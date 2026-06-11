@@ -181,35 +181,33 @@ class AuthService:
 
     def google_signin(self, data: GoogleSignInRequest, meta: dict) -> TokenResponse:
         email = data.email
-        if data.id_token and data.id_token != "mock_debug_token":
-            try:
-                from google.oauth2 import id_token
-                from google.auth.transport import requests as google_requests
-                
-                # Verify the token signature.
-                id_info = id_token.verify_oauth2_token(
-                    data.id_token, google_requests.Request(), audience=None
-                )
-                
-                token_email = id_info.get("email")
-                if not token_email or token_email.lower() != email.lower():
-                    raise HTTPException(
-                        status_code=status.HTTP_401_UNAUTHORIZED,
-                        detail="Email in token does not match requested email"
-                    )
-            except Exception as e:
-                logger.error(f"Google ID token verification failed: {e}")
+        if not data.id_token:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Google ID token is required"
+            )
+
+        try:
+            from google.oauth2 import id_token
+            from google.auth.transport import requests as google_requests
+            
+            # Verify the token signature.
+            id_info = id_token.verify_oauth2_token(
+                data.id_token, google_requests.Request(), audience=None
+            )
+            
+            token_email = id_info.get("email")
+            if not token_email or token_email.lower() != email.lower():
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail=f"Google ID token verification failed: {str(e)}"
+                    detail="Email in token does not match requested email"
                 )
-        elif data.id_token == "mock_debug_token":
-            logger.info("Using mock_debug_token for Google Sign-In developer fallback")
-        else:
-            logger.warning("Google Sign-In called without id_token")
-            # We don't enforce strictly to preserve compatibility during setup,
-            # but log warning.
-            pass
+        except Exception as e:
+            logger.error(f"Google ID token verification failed: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=f"Google ID token verification failed: {str(e)}"
+            )
 
         user = self.repo.get_user_by_identity(email)
         
@@ -270,10 +268,24 @@ class AuthService:
             VerificationCode.email == email
         ).order_by(VerificationCode.created_at.desc()).first()
         
-        if not entry or entry.code != code:
+        if not entry:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Неверный код подтверждения"
+                detail="Код подтверждения не найден"
+            )
+            
+        if entry.attempts >= 5:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Превышено количество попыток. Запросите новый код."
+            )
+
+        if entry.code != code:
+            entry.attempts += 1
+            self.repo.db.commit()
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Неверный код подтверждения. Осталось попыток: {5 - entry.attempts}"
             )
             
         if entry.expires_at < now:

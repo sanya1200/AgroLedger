@@ -231,9 +231,19 @@ class HomeScreen extends StatelessWidget {
   Widget _buildNewsItem(String title, String subtitle, IconData icon, String url) {
     return GestureDetector(
       onTap: () async {
-        final uri = Uri.parse(url);
-        if (await canLaunchUrl(uri)) {
-          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        try {
+          final uri = Uri.parse(url);
+          if (await canLaunchUrl(uri)) {
+            await launchUrl(uri, mode: LaunchMode.externalApplication);
+          } else {
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Новость временно недоступна')));
+            }
+          }
+        } catch (e) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Новость временно недоступна')));
+          }
         }
       },
       child: SoftCard(

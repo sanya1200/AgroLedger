@@ -24,6 +24,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _passwordController = TextEditingController();
 
   bool _isGoogleAction = false;
+  bool _agreedToTerms = false;
 
   @override
   void initState() {
@@ -48,6 +49,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() {
       _isGoogleAction = false;
     });
+    if (!_agreedToTerms) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Необходимо согласие на обработку данных'),
+          backgroundColor: AppColors.errorSoft,
+        ),
+      );
+      return;
+    }
     if (_formKey.currentState!.validate()) {
       context.read<AuthBloc>().add(
             AuthRegisterRequested(
@@ -109,7 +119,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Не удалось выполнить вход через SDK Google. Возможная причина: отсутствие конфигурации OAuth (SHA-1) для данного устройства.',
+                  'Не удалось выполнить регистрацию через SDK Google. Возможная причина: отсутствие конфигурации OAuth (SHA-1) для данного устройства.',
                   style: AppTextStyles.bodyMedium,
                 ),
                 const SizedBox(height: 12),
@@ -117,45 +127,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   'Детали ошибки:\n$errorString',
                   style: AppTextStyles.caption.copyWith(color: AppColors.errorSoft, fontWeight: FontWeight.bold),
                 ),
-                const Divider(height: 24),
-                Text(
-                  'Хотите использовать отладочный вход с тестовым аккаунтом?',
-                  style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold),
-                ),
               ],
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Отмена'),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  _useFallbackSignIn();
-                },
-                child: const Text('Вход без SDK'),
+                child: const Text('Закрыть'),
               ),
             ],
           ),
         );
       }
     }
-  }
-
-  void _useFallbackSignIn() {
-    const email = 'test.agro.farmer@gmail.com';
-    const name = 'Алексей Фермер';
-    setState(() {
-      _isGoogleAction = true;
-    });
-    context.read<AuthBloc>().add(
-          const AuthGoogleSignInRequested(
-            email: email,
-            fullName: name,
-            idToken: 'mock_debug_token',
-          ),
-        );
   }
 
   @override
@@ -256,7 +239,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         },
                       ),
                       PasswordStrengthIndicator(password: _passwordController.text),
-                      const SizedBox(height: 32),
+                      const SizedBox(height: 16),
+                      CheckboxListTile(
+                        value: _agreedToTerms,
+                        onChanged: (val) {
+                          setState(() => _agreedToTerms = val ?? false);
+                        },
+                        title: Text(
+                          'Я согласен на обработку персональных данных и принимаю Пользовательское соглашение',
+                          style: AppTextStyles.caption.copyWith(fontSize: 10),
+                        ),
+                        controlAffinity: ListTileControlAffinity.leading,
+                        contentPadding: EdgeInsets.zero,
+                        activeColor: AppColors.sagePrimary,
+                      ),
+                      const SizedBox(height: 16),
                       BlocBuilder<AuthBloc, AuthState>(
                         builder: (context, state) {
                           final isLoading = state.status == AuthStatus.loading && !_isGoogleAction;
