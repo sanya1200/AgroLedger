@@ -1,10 +1,7 @@
 #!/bin/bash
 set -e
 
-echo "Applying database migrations..."
-# Убеждаемся, что база готова перед запуском alembic
-# В продакшене лучше использовать wait-for-it или встроенные проверки
-alembic upgrade head
+echo "Database initialization is handled automatically by the application lifespan context (create_all & run_migrations)."
 
 echo "Starting application..."
 # Передаем управление uvicorn
