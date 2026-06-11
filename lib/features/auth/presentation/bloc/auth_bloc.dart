@@ -1,6 +1,8 @@
+import 'dart:convert';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:agroledger/features/auth/data/datasources/auth_remote_data_source.dart';
 import 'package:agroledger/features/auth/data/models/user_model.dart';
 import 'package:agroledger/core/services/pin_crypto_service.dart';
@@ -32,6 +34,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<AuthDeleteAccountRequested>(_onDeleteAccountRequested);
     on<AuthUpdateSettingsRequested>(_onUpdateSettingsRequested);
     on<AuthSessionExpired>(_onSessionExpired);
+    on<AuthGoogleSignInRequested>(_onGoogleSignInRequested);
   }
 
   Future<void> _onUpdateSettingsRequested(
@@ -84,9 +87,40 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
     try {
       final user = await _authRemoteDataSource.getMe();
+      
+      // Cache user profile
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('cached_user_profile', jsonEncode(user.toJson()));
+      } catch (cacheError) {
+        dev.log('Failed to save user to cache', error: cacheError);
+      }
+
       emit(state.copyWith(status: AuthStatus.authenticated, user: user));
     } catch (e) {
       dev.log('Auth check failed', error: e);
+
+      // Check if it is a network connectivity error
+      final errorStr = e.toString().toLowerCase();
+      final isNetworkError = errorStr.contains('timeout') ||
+          errorStr.contains('connection') ||
+          errorStr.contains('network') ||
+          errorStr.contains('socket') ||
+          errorStr.contains('host');
+
+      if (isNetworkError) {
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          final cachedUserJson = prefs.getString('cached_user_profile');
+          if (cachedUserJson != null) {
+            final user = UserModel.fromJson(jsonDecode(cachedUserJson));
+            emit(state.copyWith(status: AuthStatus.authenticated, user: user));
+            return;
+          }
+        } catch (cacheError) {
+          dev.log('Failed to read user from cache', error: cacheError);
+        }
+      }
 
       final remainingRefresh = await _storage.read(key: 'refresh_token');
       if (remainingRefresh == null) {
@@ -109,6 +143,15 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     emit(state.copyWith(status: AuthStatus.loading, errorMessage: null));
     try {
       final user = await _authRemoteDataSource.login(event.email, event.password);
+      
+      // Cache user profile
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('cached_user_profile', jsonEncode(user.toJson()));
+      } catch (cacheError) {
+        dev.log('Failed to save user to cache', error: cacheError);
+      }
+
       emit(state.copyWith(status: AuthStatus.authenticated, user: user));
     } catch (e) {
       emit(state.copyWith(
@@ -131,6 +174,15 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         role: event.role,
         fullName: event.fullName,
       );
+      
+      // Cache user profile
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('cached_user_profile', jsonEncode(user.toJson()));
+      } catch (cacheError) {
+        dev.log('Failed to save user to cache', error: cacheError);
+      }
+
       emit(state.copyWith(status: AuthStatus.authenticated, user: user));
     } catch (e) {
       emit(state.copyWith(
@@ -220,5 +272,35 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       user: null,
       errorMessage: sessionExpiredMessage,
     ));
+  }
+
+  Future<void> _onGoogleSignInRequested(
+    AuthGoogleSignInRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(state.copyWith(status: AuthStatus.loading, errorMessage: null));
+    try {
+      final user = await _authRemoteDataSource.googleSignIn(
+        email: event.email,
+        fullName: event.fullName,
+        phone: event.phone,
+        role: event.role,
+      );
+
+      // Cache user profile
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('cached_user_profile', jsonEncode(user.toJson()));
+      } catch (cacheError) {
+        dev.log('Failed to save user to cache', error: cacheError);
+      }
+
+      emit(state.copyWith(status: AuthStatus.authenticated, user: user));
+    } catch (e) {
+      emit(state.copyWith(
+        status: AuthStatus.failure,
+        errorMessage: e.toString(),
+      ));
+    }
   }
 }

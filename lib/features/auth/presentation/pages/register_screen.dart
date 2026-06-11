@@ -5,6 +5,9 @@ import 'package:agroledger/features/auth/presentation/widgets/animated_input_fie
 import 'package:agroledger/core/theme/app_colors.dart';
 import 'package:agroledger/core/theme/app_text_styles.dart';
 import 'package:agroledger/core/presentation/widgets/soft_card.dart';
+import 'package:agroledger/features/auth/presentation/widgets/google_sign_in_button.dart';
+import 'package:agroledger/features/auth/presentation/widgets/google_account_picker_dialog.dart';
+import 'package:agroledger/features/auth/presentation/widgets/google_registration_completion_dialog.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -20,6 +23,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
 
+  bool _isGoogleAction = false;
+  String? _googleEmail;
+  String? _googleName;
+
   @override
   void dispose() {
     _nameController.dispose();
@@ -30,6 +37,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   void _onRegister() {
+    setState(() {
+      _isGoogleAction = false;
+    });
     if (_formKey.currentState!.validate()) {
       context.read<AuthBloc>().add(
             AuthRegisterRequested(
@@ -40,6 +50,61 @@ class _RegisterScreenState extends State<RegisterScreen> {
               fullName: _nameController.text.trim(),
             ),
           );
+    }
+  }
+
+  Future<void> _onGoogleSignIn() async {
+    final result = await showDialog<Map<String, String>>(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) => const GoogleAccountPickerDialog(),
+    );
+
+    if (result != null) {
+      final email = result['email']!;
+      final name = result['name']!;
+      setState(() {
+        _googleEmail = email;
+        _googleName = name;
+        _isGoogleAction = true;
+      });
+      if (mounted) {
+        context.read<AuthBloc>().add(
+              AuthGoogleSignInRequested(
+                email: email,
+                fullName: name,
+              ),
+            );
+      }
+    }
+  }
+
+  Future<void> _showRegistrationCompletionDialog() async {
+    final result = await showDialog<Map<String, String>>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => GoogleRegistrationCompletionDialog(email: _googleEmail!),
+    );
+
+    if (result != null) {
+      final phone = result['phone']!;
+      final role = result['role']!;
+      if (mounted) {
+        context.read<AuthBloc>().add(
+              AuthGoogleSignInRequested(
+                email: _googleEmail!,
+                fullName: _googleName!,
+                phone: phone,
+                role: role,
+              ),
+            );
+      }
+    } else {
+      setState(() {
+        _isGoogleAction = false;
+        _googleEmail = null;
+        _googleName = null;
+      });
     }
   }
 
@@ -55,19 +120,28 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ),
       body: BlocListener<AuthBloc, AuthState>(
         listener: (context, state) {
-          if (state.status == AuthStatus.authenticated) {
+          if (state.status == AuthStatus.authenticated || state.status == AuthStatus.authorized) {
+            setState(() {
+              _isGoogleAction = false;
+              _googleEmail = null;
+              _googleName = null;
+            });
             // After successful registration, we are now authenticated
             // The AuthFlowController will handle the switch to PIN screen
             Navigator.of(context).pop();
           }
           if (state.status == AuthStatus.failure && state.errorMessage != null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.errorMessage!),
-                backgroundColor: AppColors.errorSoft,
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
+            if (state.errorMessage == "GOOGLE_REGISTRATION_REQUIRED" && _isGoogleAction && _googleEmail != null) {
+              _showRegistrationCompletionDialog();
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.errorMessage!),
+                  backgroundColor: AppColors.errorSoft,
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            }
           }
         },
         child: SingleChildScrollView(
@@ -127,9 +201,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       const SizedBox(height: 32),
                       BlocBuilder<AuthBloc, AuthState>(
                         builder: (context, state) {
-                          final isLoading = state.status == AuthStatus.loading;
+                          final isLoading = state.status == AuthStatus.loading && !_isGoogleAction;
                           return ElevatedButton(
-                            onPressed: isLoading ? null : _onRegister,
+                            onPressed: state.status == AuthStatus.loading ? null : _onRegister,
                             child: isLoading
                                 ? const SizedBox(
                                     height: 24,
@@ -137,6 +211,29 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                                   )
                                 : const Text('Создать аккаунт'),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(child: Divider(color: AppColors.sageLight.withValues(alpha: 0.2))),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: Text('или', style: AppTextStyles.caption),
+                          ),
+                          Expanded(child: Divider(color: AppColors.sageLight.withValues(alpha: 0.2))),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      BlocBuilder<AuthBloc, AuthState>(
+                        builder: (context, state) {
+                          final isGoogleLoading = state.status == AuthStatus.loading && _isGoogleAction;
+                          return GoogleSignInButton(
+                            isLoading: isGoogleLoading,
+                            onPressed: (state.status == AuthStatus.loading)
+                                ? null
+                                : _onGoogleSignIn,
                           );
                         },
                       ),

@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.dependencies import get_current_user
 from app.models.user import User
-from app.schemas.auth import BaseResponse, SignUpRequest, SignInRequest, TokenResponse, UserDetailResponse, PinSetupRequest, UpdateSettingsRequest
+from app.schemas.auth import BaseResponse, SignUpRequest, SignInRequest, TokenResponse, UserDetailResponse, PinSetupRequest, UpdateSettingsRequest, GoogleSignInRequest
 from app.services.auth_service import AuthService
 from app.core.security import get_password_hash
 from app.repositories.user_repository import UserRepository
@@ -116,3 +116,22 @@ def delete_account(
 def get_me(current_user: User = Depends(get_current_user)):
     """Returns details of the currently authenticated user."""
     return BaseResponse(data=UserDetailResponse.model_validate(current_user))
+
+@router.post("/google-signin", response_model=BaseResponse[TokenResponse])
+def google_signin(
+    data: GoogleSignInRequest,
+    request: Request,
+    x_device_fingerprint: str = Header("unknown"),
+    x_device_name: str = Header("unknown"),
+    db: Session = Depends(get_db)
+):
+    """Authenticates user via Google. Registers new user if phone & role are provided."""
+    service = AuthService(db)
+    meta = {
+        "fingerprint": x_device_fingerprint,
+        "device_name": x_device_name,
+        "ip": request.client.host if request.client else "0.0.0.0"
+    }
+    tokens = service.google_signin(data, meta)
+    return BaseResponse(data=tokens)
+

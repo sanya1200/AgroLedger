@@ -71,3 +71,20 @@ class AuthLogoutRequested extends AuthEvent {}
 class AuthDeleteAccountRequested extends AuthEvent {}
 
 class AuthSessionExpired extends AuthEvent {}
+
+class AuthGoogleSignInRequested extends AuthEvent {
+  final String email;
+  final String fullName;
+  final String? phone;
+  final String? role;
+
+  const AuthGoogleSignInRequested({
+    required this.email,
+    required this.fullName,
+    this.phone,
+    this.role,
+  });
+
+  @override
+  List<Object?> get props => [email, fullName, phone, role];
+}

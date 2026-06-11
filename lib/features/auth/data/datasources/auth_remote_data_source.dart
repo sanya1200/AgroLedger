@@ -17,6 +17,12 @@ abstract class AuthRemoteDataSource {
   Future<void> deleteAccount();
   Future<UserModel> getMe();
   Future<void> setupPin(String pinCode);
+  Future<UserModel> googleSignIn({
+    required String email,
+    required String fullName,
+    String? phone,
+    String? role,
+  });
 }
 
 class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
@@ -163,6 +169,42 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       final data = response.data;
       if (data == null || data['success'] != true) {
         throw data?['error'] ?? 'Ошибка сохранения ПИН-кода на сервере';
+      }
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  @override
+  Future<UserModel> googleSignIn({
+    required String email,
+    required String fullName,
+    String? phone,
+    String? role,
+  }) async {
+    try {
+      final response = await _client.dio.post(
+        'auth/google-signin',
+        data: {
+          'email': email,
+          'full_name': fullName,
+          if (phone != null) 'phone': phone,
+          if (role != null) 'role': role,
+        },
+        options: Options(headers: _getDeviceHeaders()),
+      );
+
+      final data = response.data;
+      if (data != null && data['success'] == true) {
+        final tokenData = data['data'];
+        await _storage.write(key: 'access_token', value: tokenData['access_token']);
+        await _storage.write(key: 'refresh_token', value: tokenData['refresh_token']);
+        
+        return await getMe();
+      } else {
+        throw data?['error'] ?? 'Ошибка входа через Google';
       }
     } on DioException catch (e) {
       throw _handleDioError(e);

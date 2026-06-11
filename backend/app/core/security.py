@@ -24,7 +24,7 @@ def create_token_pair(user_id: int) -> dict:
     Refresh token: 30 days.
     """
     access_expire = datetime.now(timezone.utc) + timedelta(minutes=15)
-    refresh_expire = datetime.now(timezone.utc) + timedelta(days=30)
+    refresh_expire = datetime.now(timezone.utc) + timedelta(days=180)
 
     jti = str(uuid.uuid4())
 

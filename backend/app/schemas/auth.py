@@ -65,3 +65,11 @@ class UserDetailResponse(BaseModel):
     premium_until: Optional[datetime] = None
     created_at: Optional[datetime] = Field(default=None)
     has_business_profile: bool = False
+
+
+class GoogleSignInRequest(BaseModel):
+    email: EmailStr
+    full_name: Optional[str] = None
+    phone: Optional[str] = None
+    role: Optional[str] = None
+

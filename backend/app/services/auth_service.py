@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from app.repositories.user_repository import UserRepository
 from app.core.security import get_password_hash, verify_password, create_token_pair, verify_token
 from app.models.user import User, UserSession
-from app.schemas.auth import SignUpRequest, SignInRequest, TokenResponse
+from app.schemas.auth import SignUpRequest, SignInRequest, TokenResponse, GoogleSignInRequest
 
 logger = logging.getLogger(__name__)
 
@@ -153,3 +153,59 @@ class AuthService:
             refresh_token=tokens["refresh_token"],
             expires_in=tokens["expires_in"]
         )
+
+    def google_signin(self, data: GoogleSignInRequest, meta: dict) -> TokenResponse:
+        user = self.repo.get_user_by_identity(data.email)
+        
+        if not user:
+            if not data.phone or not data.role:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="GOOGLE_REGISTRATION_REQUIRED"
+                )
+            
+            if self.repo.get_user_by_identity(data.phone):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="User with this phone number already exists"
+                )
+            
+            import secrets
+            random_pwd = secrets.token_urlsafe(16)
+            user = User(
+                email=data.email,
+                phone=data.phone,
+                full_name=data.full_name,
+                hashed_password=get_password_hash(random_pwd),
+                role=str(data.role),
+                is_verified=True,
+                created_at=datetime.now(timezone.utc)
+            )
+            user = self.repo.create_user(user)
+        
+        if not user.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="User account is deactivated"
+            )
+            
+        self.repo.revoke_all_user_sessions(user.id)
+        tokens = create_token_pair(user.id)
+        
+        session = UserSession(
+            user_id=user.id,
+            refresh_token_hash=get_password_hash(tokens["refresh_token"]),
+            refresh_jti=tokens["jti"],
+            device_fingerprint=meta["fingerprint"],
+            device_name=meta["device_name"],
+            ip_address=meta["ip"],
+            expires_at=tokens["refresh_expires_at"]
+        )
+        self.repo.create_session(session)
+        
+        return TokenResponse(
+            access_token=tokens["access_token"],
+            refresh_token=tokens["refresh_token"],
+            expires_in=tokens["expires_in"]
+        )
+
