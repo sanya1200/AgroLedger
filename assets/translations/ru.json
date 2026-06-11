@@ -1,0 +1,30 @@
+{
+  "app_name": "AgroLedger",
+  "auth": {
+    "login": "Войти",
+    "register": "Регистрация",
+    "email": "Email",
+    "password": "Пароль"
+  },
+  "navigation": {
+    "home": "Главная",
+    "calculator": "Калькулятор",
+    "marketplace": "Маркетплейс",
+    "chats": "Чаты",
+    "profile": "Профиль"
+  },
+  "marketplace": {
+    "title": "Маркетплейс",
+    "search_hint": "Поиск товаров...",
+    "filter": "Фильтры",
+    "sell": "Продать",
+    "empty": "Товары не найдены",
+    "empty_subtitle": "Попробуйте выбрать другую категорию",
+    "contact_seller": "Написать продавцу"
+  },
+  "chat": {
+    "title": "Сообщения",
+    "empty": "У вас пока нет сообщений",
+    "type_message": "Сообщение..."
+  }
+}

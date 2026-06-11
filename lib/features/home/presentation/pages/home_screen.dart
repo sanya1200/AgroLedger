@@ -156,6 +156,7 @@ class HomeScreen extends StatelessWidget {
             Text('Новости и советы', style: AppTextStyles.h2.copyWith(fontSize: 20)),
             const SizedBox(height: 14),
             _buildNewsItem(
+              context,
               'Как повысить удойность',
               'Советы по кормлению КРС в весенний период для достижения лучших результатов.',
               Icons.tips_and_updates_outlined,
@@ -163,6 +164,7 @@ class HomeScreen extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             _buildNewsItem(
+              context,
               'Цены на рынке',
               'Обзор цен на мясо и молоко в вашем регионе за прошедшую неделю.',
               Icons.trending_up_rounded,
@@ -228,7 +230,7 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildNewsItem(String title, String subtitle, IconData icon, String url) {
+  Widget _buildNewsItem(BuildContext context, String title, String subtitle, IconData icon, String url) {
     return GestureDetector(
       onTap: () async {
         try {

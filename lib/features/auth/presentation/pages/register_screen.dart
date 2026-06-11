@@ -51,8 +51,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
     });
     if (!_agreedToTerms) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Необходимо согласие на обработку данных'),
+        const SnackBar(
+          content: Text('Необходимо согласие на обработку данных'),
           backgroundColor: AppColors.errorSoft,
         ),
       );

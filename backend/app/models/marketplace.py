@@ -44,3 +44,7 @@ class Product(Base):
     @property
     def seller_phone(self) -> Optional[str]:
         return self.business.user.phone if self.business and self.business.user else None
+
+    @property
+    def seller_id(self) -> Optional[int]:
+        return self.business.user_id if self.business else None

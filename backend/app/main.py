@@ -18,6 +18,7 @@ from app.models.business_profile import BusinessProfile
 from app.models.marketplace import Product
 from app.models.calculator import LivestockAsset, LivestockExpenses, LivestockYield
 from app.models.calendar import LivestockTask
+from app.models.chat import ChatRoom, Message
 
 import app.routers.auth as auth_mod
 import app.routers.business as business_mod
@@ -27,6 +28,7 @@ import app.routers.calendar as calendar_mod
 import app.routers.legal as legal_mod
 import app.routers.ai as ai_mod
 import app.routers.upload as upload_mod
+import app.routers.chat as chat_mod
 
 logging.basicConfig(
     level=logging.INFO,
@@ -282,6 +284,7 @@ app.include_router(calendar_mod.router, prefix=f"{settings.API_V1_STR}/calendar"
 app.include_router(legal_mod.router, prefix="/legal", tags=["Legal"])
 app.include_router(ai_mod.router, prefix=f"{settings.API_V1_STR}/ai", tags=["AI Consultant"])
 app.include_router(upload_mod.router, prefix=f"{settings.API_V1_STR}/upload", tags=["Media Upload"])
+app.include_router(chat_mod.router, prefix=f"{settings.API_V1_STR}/chat", tags=["Chat"])
 
 @app.exception_handler(StarletteHTTPException)
 async def http_exception_handler(request: Request, exc: StarletteHTTPException):

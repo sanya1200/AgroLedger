@@ -6,6 +6,7 @@ import 'package:agroledger/features/calculator/presentation/pages/calculator_das
 import 'package:agroledger/features/home/presentation/pages/profile_screen.dart';
 import 'package:agroledger/features/home/presentation/pages/home_screen.dart';
 import 'package:agroledger/features/home/presentation/pages/help_support_screen.dart';
+import 'package:agroledger/features/chat/presentation/pages/chat_list_screen.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -35,6 +36,7 @@ class _MainScreenState extends State<MainScreen> {
           ),
           const CalculatorDashboardScreen(),
           const CatalogScreen(),
+          const ChatListScreen(),
           const ProfileScreen(),
         ];
 
@@ -63,6 +65,11 @@ class _MainScreenState extends State<MainScreen> {
                 icon: Icon(Icons.shopping_bag_outlined),
                 selectedIcon: Icon(Icons.shopping_bag),
                 label: 'Маркет',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.chat_bubble_outline_rounded),
+                selectedIcon: Icon(Icons.chat_bubble_rounded),
+                label: 'Чаты',
               ),
               NavigationDestination(
                 icon: Icon(Icons.person_outline),

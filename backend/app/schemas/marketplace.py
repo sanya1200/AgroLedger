@@ -48,3 +48,4 @@ class ProductResponse(ProductBase):
     created_at: Optional[datetime] = None
     seller_name: Optional[str] = None
     seller_phone: Optional[str] = None
+    seller_id: Optional[int] = None

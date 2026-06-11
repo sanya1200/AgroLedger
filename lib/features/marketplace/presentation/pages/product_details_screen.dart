@@ -4,6 +4,11 @@ import 'package:agroledger/features/marketplace/data/models/product_model.dart';
 import 'package:agroledger/core/theme/app_colors.dart';
 import 'package:agroledger/core/theme/app_text_styles.dart';
 import 'package:agroledger/core/presentation/widgets/soft_card.dart';
+import 'package:agroledger/features/chat/presentation/bloc/chat_bloc.dart';
+import 'package:agroledger/features/chat/presentation/bloc/chat_event.dart';
+import 'package:agroledger/features/chat/presentation/bloc/chat_state.dart';
+import 'package:agroledger/features/chat/presentation/pages/chat_detail_screen.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class ProductDetailsScreen extends StatelessWidget {
@@ -181,14 +186,53 @@ class ProductDetailsScreen extends StatelessWidget {
         child: Row(
           children: [
             Expanded(
-              child: ElevatedButton.icon(
-                onPressed: () => _contactSeller(product.sellerPhone),
-                icon: const Icon(Icons.chat_bubble_outline_rounded),
-                label: const Text('Написать (WhatsApp)'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.sagePrimary,
-                  minimumSize: const Size.fromHeight(56),
-                ),
+              child: BlocConsumer<ChatBloc, ChatState>(
+                listener: (context, state) {
+                  if (state is ChatRoomCreated) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ChatDetailScreen(
+                          roomId: state.room.id,
+                          title: 'Чат по товару #${product.id}',
+                        ),
+                      ),
+                    );
+                  } else if (state is ChatFailure) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(state.message)),
+                    );
+                  }
+                },
+                builder: (context, state) {
+                  final isLoading = state is ChatLoading;
+                  return ElevatedButton.icon(
+                    onPressed: isLoading
+                        ? null
+                        : () {
+                            // Если sellerId нет в product (что странно), fallback на whatsapp
+                            if (product.sellerId != null) {
+                              context.read<ChatBloc>().add(
+                                CreateRoomRequested(product.id, product.sellerId!),
+                              );
+                            } else {
+                              _contactSeller(product.sellerPhone);
+                            }
+                          },
+                    icon: isLoading
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                          )
+                        : const Icon(Icons.chat_bubble_outline_rounded),
+                    label: Text(isLoading ? 'Загрузка...' : 'Написать продавцу'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.sagePrimary,
+                      minimumSize: const Size.fromHeight(56),
+                    ),
+                  );
+                },
               ),
             ),
           ],

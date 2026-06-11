@@ -15,6 +15,8 @@ import 'package:agroledger/features/marketplace/presentation/bloc/marketplace_bl
 import 'package:agroledger/features/home/data/datasources/business_profile_remote_data_source.dart';
 import 'package:agroledger/features/home/data/datasources/ai_remote_data_source.dart';
 import 'package:agroledger/features/calculator/presentation/bloc/calendar_bloc.dart';
+import 'package:agroledger/features/chat/data/datasources/chat_remote_datasource.dart';
+import 'package:agroledger/features/chat/presentation/bloc/chat_bloc.dart';
 
 final sl = GetIt.instance;
 
@@ -54,6 +56,9 @@ Future<void> initServiceLocator() async {
   sl.registerLazySingleton<AiRemoteDataSource>(
     () => AiRemoteDataSourceImpl(sl<DioClient>()),
   );
+  sl.registerLazySingleton<ChatRemoteDataSourceImpl>(
+    () => ChatRemoteDataSourceImpl(sl<DioClient>(), sl<FlutterSecureStorage>()),
+  );
 
   sl.registerLazySingleton(
     () => AuthBloc(
@@ -69,5 +74,8 @@ Future<void> initServiceLocator() async {
   );
   sl.registerFactory(
     () => CalendarBloc(sl<CalculatorRepository>()),
+  );
+  sl.registerFactory(
+    () => ChatBloc(sl<ChatRemoteDataSourceImpl>()),
   );
 }

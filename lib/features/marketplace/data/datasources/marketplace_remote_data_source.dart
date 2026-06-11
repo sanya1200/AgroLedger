@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:agroledger/core/network/dio_client.dart';
 import 'package:agroledger/core/network/error_handler.dart';
 import 'package:agroledger/features/marketplace/data/models/product_model.dart';
@@ -49,11 +50,28 @@ class MarketplaceRemoteDataSourceImpl implements MarketplaceRemoteDataSource {
         queryParameters: queryParams.isNotEmpty ? queryParams : null,
       );
       final data = _unwrap(response.data);
-      return (data as List)
+      
+      final products = (data as List)
           .map((e) => ProductModel.fromJson(Map<String, dynamic>.from(e)))
           .toList();
+          
+      // Cache the result if no filters are applied
+      if (queryParams.isEmpty) {
+        final box = Hive.box('offline_cache');
+        await box.put('marketplace_products', products.map((e) => e.toJson()).toList());
+      }
+      
+      return products;
     } on DioException catch (e) {
-      throw handleDioError(e, 'Ошибка загрузки каталога');
+      // Fallback to cache
+      final box = Hive.box('offline_cache');
+      final cachedData = box.get('marketplace_products');
+      if (cachedData != null) {
+        return (cachedData as List)
+            .map((e) => ProductModel.fromJson(Map<String, dynamic>.from(e)))
+            .toList();
+      }
+      throw handleDioError(e, 'Ошибка загрузки каталога (Оффлайн)');
     } catch (e) {
       rethrow;
     }

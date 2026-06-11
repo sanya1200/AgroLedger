@@ -15,6 +15,7 @@ class ProductModel extends Equatable {
   final DateTime? createdAt;
   final String? sellerName;
   final String? sellerPhone;
+  final int? sellerId;
 
   const ProductModel({
     required this.id,
@@ -31,6 +32,7 @@ class ProductModel extends Equatable {
     this.createdAt,
     this.sellerName,
     this.sellerPhone,
+    this.sellerId,
   });
 
   factory ProductModel.fromJson(Map<String, dynamic> json) {
@@ -53,7 +55,28 @@ class ProductModel extends Equatable {
           : null,
       sellerName: json['seller_name'] as String?,
       sellerPhone: json['seller_phone'] as String?,
+      sellerId: json['seller_id'] as int?,
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'business_id': businessId,
+      'title': title,
+      'description': description,
+      'category': category,
+      'price_retail': priceRetail,
+      'price_wholesale': priceWholesale,
+      'wholesale_min_qty': wholesaleMinQty,
+      'image_url': imageUrl,
+      'stock_quantity': stockQuantity,
+      'is_active': isActive,
+      'created_at': createdAt?.toIso8601String(),
+      'seller_name': sellerName,
+      'seller_phone': sellerPhone,
+      'seller_id': sellerId,
+    };
   }
 
   @override
@@ -72,5 +95,6 @@ class ProductModel extends Equatable {
         createdAt,
         sellerName,
         sellerPhone,
+        sellerId,
       ];
 }

@@ -5,6 +5,7 @@ import 'package:agroledger/features/calculator/data/models/livestock_asset_model
 import 'package:agroledger/features/calculator/data/models/calculator_summary_model.dart';
 import 'package:agroledger/features/calculator/data/models/predictive_forecast_model.dart';
 import 'package:agroledger/features/calculator/data/models/livestock_task_model.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
 class FreeLimitException implements Exception {}
 class PremiumRequiredException implements Exception {}
@@ -146,11 +147,25 @@ class CalculatorRemoteDataSourceImpl implements CalculatorRemoteDataSource {
     try {
       final response = await _client.dio.get('calendar/tasks');
       final data = _unwrap(response.data);
-      return (data as List)
+      final tasks = (data as List)
           .map((e) => LivestockTaskModel.fromJson(Map<String, dynamic>.from(e)))
           .toList();
+          
+      // Cache tasks
+      final box = Hive.box('offline_cache');
+      await box.put('calendar_tasks', tasks.map((e) => e.toJson()).toList());
+      
+      return tasks;
     } on DioException catch (e) {
-      throw handleDioError(e, 'Ошибка получения задач календаря');
+      // Fallback to cache
+      final box = Hive.box('offline_cache');
+      final cachedData = box.get('calendar_tasks');
+      if (cachedData != null) {
+        return (cachedData as List)
+            .map((e) => LivestockTaskModel.fromJson(Map<String, dynamic>.from(e)))
+            .toList();
+      }
+      throw handleDioError(e, 'Ошибка получения задач календаря (Оффлайн)');
     } catch (e) {
       rethrow;
     }

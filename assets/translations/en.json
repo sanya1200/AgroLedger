@@ -1,0 +1,30 @@
+{
+  "app_name": "AgroLedger",
+  "auth": {
+    "login": "Login",
+    "register": "Register",
+    "email": "Email",
+    "password": "Password"
+  },
+  "navigation": {
+    "home": "Home",
+    "calculator": "Calculator",
+    "marketplace": "Marketplace",
+    "chats": "Chats",
+    "profile": "Profile"
+  },
+  "marketplace": {
+    "title": "Marketplace",
+    "search_hint": "Search products...",
+    "filter": "Filters",
+    "sell": "Sell",
+    "empty": "No products found",
+    "empty_subtitle": "Try selecting another category",
+    "contact_seller": "Contact Seller"
+  },
+  "chat": {
+    "title": "Messages",
+    "empty": "You have no messages yet",
+    "type_message": "Message..."
+  }
+}

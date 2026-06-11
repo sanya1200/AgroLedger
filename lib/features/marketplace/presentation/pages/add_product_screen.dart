@@ -246,7 +246,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
   void _submit() {
     if (_formKey.currentState!.validate()) {
-      final productData = {
+      final productData = <String, dynamic>{
         'title': _titleController.text.trim(),
         'description': _descriptionController.text.trim(),
         'category': _selectedCategory,

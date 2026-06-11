@@ -1,0 +1,30 @@
+{
+  "app_name": "AgroLedger",
+  "auth": {
+    "login": "Кіру",
+    "register": "Тіркелу",
+    "email": "Email",
+    "password": "Құпия сөз"
+  },
+  "navigation": {
+    "home": "Басты бет",
+    "calculator": "Калькулятор",
+    "marketplace": "Маркетплейс",
+    "chats": "Чаттар",
+    "profile": "Профиль"
+  },
+  "marketplace": {
+    "title": "Маркетплейс",
+    "search_hint": "Тауарларды іздеу...",
+    "filter": "Сүзгілер",
+    "sell": "Сату",
+    "empty": "Тауарлар табылмады",
+    "empty_subtitle": "Басқа санатты таңдап көріңіз",
+    "contact_seller": "Сатушыға жазу"
+  },
+  "chat": {
+    "title": "Хабарламалар",
+    "empty": "Сізде әлі хабарлама жоқ",
+    "type_message": "Хабарлама..."
+  }
+}
