@@ -11,7 +11,7 @@ class LivestockExpenseModel extends Equatable {
   final OtherSubType? otherSubType;
   final double amount;
   final String? description;
-  final DateTime date;
+  final DateTime? date;
 
   const LivestockExpenseModel({
     this.id,
@@ -22,7 +22,7 @@ class LivestockExpenseModel extends Equatable {
     this.otherSubType,
     required this.amount,
     this.description,
-    required this.date,
+    this.date,
   });
 
   factory LivestockExpenseModel.fromJson(Map<String, dynamic> json) {
@@ -43,7 +43,7 @@ class LivestockExpenseModel extends Equatable {
           : null,
       amount: parseJsonNumeric(json['amount']),
       description: json['description'],
-      date: DateTime.parse(json['date']),
+      date: json['date'] != null ? DateTime.parse(json['date'].toString()) : null,
     );
   }
 
@@ -55,7 +55,7 @@ class LivestockExpenseModel extends Equatable {
         if (otherSubType != null) 'other_sub_type': otherSubType!.name,
         'amount': amount,
         if (description != null) 'description': description,
-        'date': date.toIso8601String(),
+        'date': date?.toIso8601String(),
       };
 
   @override

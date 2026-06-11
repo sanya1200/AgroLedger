@@ -6,7 +6,7 @@ class CalculationCycleModel extends Equatable {
   final String name;
   final String animalType;
   final String status;
-  final DateTime createdAt;
+  final DateTime? createdAt;
   final DateTime? closedAt;
 
   const CalculationCycleModel({
@@ -15,7 +15,7 @@ class CalculationCycleModel extends Equatable {
     required this.name,
     required this.animalType,
     required this.status,
-    required this.createdAt,
+    this.createdAt,
     this.closedAt,
   });
 
@@ -26,7 +26,7 @@ class CalculationCycleModel extends Equatable {
       name: json['name'],
       animalType: json['animal_type'],
       status: json['status'],
-      createdAt: DateTime.parse(json['created_at']),
+      createdAt: json['created_at'] != null ? DateTime.parse(json['created_at'].toString()) : null,
       closedAt: json['closed_at'] != null ? DateTime.parse(json['closed_at']) : null,
     );
   }

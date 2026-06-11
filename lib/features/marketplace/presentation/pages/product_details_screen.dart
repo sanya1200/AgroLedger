@@ -77,7 +77,9 @@ class ProductDetailsScreen extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        DateFormat('dd.MM.yyyy').format(product.createdAt),
+                        product.createdAt != null
+                            ? DateFormat('dd.MM.yyyy').format(product.createdAt!)
+                            : '',
                         style: AppTextStyles.caption,
                       ),
                     ],

@@ -12,7 +12,7 @@ class ProductModel extends Equatable {
   final String? imageUrl;
   final double stockQuantity;
   final bool isActive;
-  final DateTime createdAt;
+  final DateTime? createdAt;
   final String? sellerName;
   final String? sellerPhone;
 
@@ -28,7 +28,7 @@ class ProductModel extends Equatable {
     this.imageUrl,
     required this.stockQuantity,
     required this.isActive,
-    required this.createdAt,
+    this.createdAt,
     this.sellerName,
     this.sellerPhone,
   });
@@ -48,7 +48,9 @@ class ProductModel extends Equatable {
       imageUrl: json['image_url'] as String?,
       stockQuantity: double.parse(json['stock_quantity'].toString()),
       isActive: json['is_active'] as bool,
-      createdAt: DateTime.parse(json['created_at'] as String),
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'].toString())
+          : null,
       sellerName: json['seller_name'] as String?,
       sellerPhone: json['seller_phone'] as String?,
     );

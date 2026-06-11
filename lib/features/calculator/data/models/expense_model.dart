@@ -4,7 +4,7 @@ class ExpenseModel {
   final String category;
   final double amount;
   final String? description;
-  final DateTime date;
+  final DateTime? date;
 
   ExpenseModel({
     required this.id,
@@ -12,7 +12,7 @@ class ExpenseModel {
     required this.category,
     required this.amount,
     this.description,
-    required this.date,
+    this.date,
   });
 
   factory ExpenseModel.fromJson(Map<String, dynamic> json) {
@@ -22,7 +22,7 @@ class ExpenseModel {
       category: json['category'],
       amount: double.parse(json['amount'].toString()),
       description: json['description'],
-      date: DateTime.parse(json['date']),
+      date: json['date'] != null ? DateTime.parse(json['date'].toString()) : null,
     );
   }
 }

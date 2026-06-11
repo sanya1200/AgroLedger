@@ -8,7 +8,7 @@ class LivestockYieldModel extends Equatable {
   final ProductSubType productSubType;
   final double volume;
   final double earnings;
-  final DateTime date;
+  final DateTime? date;
 
   const LivestockYieldModel({
     this.id,
@@ -16,7 +16,7 @@ class LivestockYieldModel extends Equatable {
     required this.productSubType,
     required this.volume,
     required this.earnings,
-    required this.date,
+    this.date,
   });
 
   factory LivestockYieldModel.fromJson(Map<String, dynamic> json) {
@@ -26,7 +26,7 @@ class LivestockYieldModel extends Equatable {
       productSubType: ProductSubType.fromString(json['product_sub_type']),
       volume: parseJsonNumeric(json['volume']),
       earnings: parseJsonNumeric(json['earnings']),
-      date: DateTime.parse(json['date']),
+      date: json['date'] != null ? DateTime.parse(json['date'].toString()) : null,
     );
   }
 
@@ -35,7 +35,7 @@ class LivestockYieldModel extends Equatable {
         'product_sub_type': productSubType.name,
         'volume': volume,
         'earnings': earnings,
-        'date': date.toIso8601String(),
+        'date': date?.toIso8601String(),
       };
 
   @override

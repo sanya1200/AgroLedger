@@ -4,7 +4,7 @@ class IncomeModel {
   final String productName;
   final double quantity;
   final double amount;
-  final DateTime date;
+  final DateTime? date;
 
   IncomeModel({
     required this.id,
@@ -12,7 +12,7 @@ class IncomeModel {
     required this.productName,
     required this.quantity,
     required this.amount,
-    required this.date,
+    this.date,
   });
 
   factory IncomeModel.fromJson(Map<String, dynamic> json) {
@@ -22,7 +22,7 @@ class IncomeModel {
       productName: json['product_name'],
       quantity: double.parse(json['quantity'].toString()),
       amount: double.parse(json['amount'].toString()),
-      date: DateTime.parse(json['date']),
+      date: json['date'] != null ? DateTime.parse(json['date'].toString()) : null,
     );
   }
 }
