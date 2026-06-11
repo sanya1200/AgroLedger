@@ -178,3 +178,31 @@ def resend_code(
     service.resend_verification_code(data.email)
     return BaseResponse(data="Code successfully resent")
 
+@router.post("/clear-db-temp-98712", response_model=BaseResponse[str])
+def clear_db_temp(db: Session = Depends(get_db)):
+    """Temporary endpoint to clear all database tables for test resetting."""
+    from sqlalchemy import text
+    tables = [
+        "verification_codes",
+        "user_sessions",
+        "livestock_yields",
+        "livestock_expenses",
+        "livestock_assets",
+        "products",
+        "calendar_events",
+        "business_profiles",
+        "users"
+    ]
+    for table in tables:
+        try:
+            db.execute(text(f"TRUNCATE TABLE {table} RESTART IDENTITY CASCADE;"))
+        except Exception:
+            db.rollback()
+            try:
+                db.execute(text(f"DELETE FROM {table};"))
+            except Exception as e:
+                db.rollback()
+                raise HTTPException(status_code=500, detail=f"Failed to clear table {table}: {str(e)}")
+    db.commit()
+    return BaseResponse(data="Database successfully cleared")
+
