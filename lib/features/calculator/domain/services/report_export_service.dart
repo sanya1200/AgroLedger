@@ -8,7 +8,6 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:agroledger/features/calculator/data/models/calculator_summary_model.dart';
-import 'package:agroledger/features/calculator/presentation/widgets/calculator_sheet_widgets.dart';
 
 class ReportExportService {
   final _dateFormat = DateFormat('yyyy-MM-dd_HH-mm');
@@ -66,8 +65,8 @@ class ReportExportService {
 
   Future<void> exportToPdf(CalculatorSummaryModel summary) async {
     final pdf = pw.Document();
-    final font = await PdfGoogleFonts.latoRegular();
-    final fontBold = await PdfGoogleFonts.latoBold();
+    final font = await PdfGoogleFonts.robotoRegular();
+    final fontBold = await PdfGoogleFonts.robotoBold();
 
     pdf.addPage(
       pw.Page(

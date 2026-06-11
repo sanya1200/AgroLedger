@@ -1,8 +1,8 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:agroledger/core/network/dio_client.dart';
+import 'package:agroledger/core/network/error_handler.dart';
 import 'package:agroledger/features/auth/data/models/user_model.dart';
-import 'dart:developer' as dev;
 
 abstract class AuthRemoteDataSource {
   Future<UserModel> login(String identity, String password);
@@ -16,6 +16,7 @@ abstract class AuthRemoteDataSource {
   Future<UserModel> updateSettings({bool? isBiometricEnabled, String? fullName});
   Future<void> deleteAccount();
   Future<UserModel> getMe();
+  Future<void> setupPin(String pinCode);
 }
 
 class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
@@ -150,33 +151,27 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     }
   }
 
-  String _handleDioError(DioException e) {
-    dev.log('DioError: ${e.type}', error: e, name: 'AuthRemoteDataSource');
-    if (e.response != null) {
-      final data = e.response?.data;
-      if (data is Map) {
-        if (data['error'] != null) return data['error'].toString();
-        
-        final detail = data['detail'];
-        if (detail is List) {
-          // FastAPI validation error format
-          try {
-            final firstError = detail.first;
-            final msg = firstError['msg'];
-            final loc = firstError['loc']?.last;
-            return 'Ошибка в поле $loc: $msg';
-          } catch (_) {
-            return 'Ошибка валидации данных';
-          }
-        }
-        if (detail is String) return detail;
-        
-        return 'Ошибка сервера';
+  @override
+  Future<void> setupPin(String pinCode) async {
+    try {
+      final response = await _client.dio.post(
+        'auth/pin-setup',
+        data: {
+          'pin_code': pinCode,
+        },
+      );
+      final data = response.data;
+      if (data == null || data['success'] != true) {
+        throw data?['error'] ?? 'Ошибка сохранения ПИН-кода на сервере';
       }
-      return 'Ошибка сервера (${e.response?.statusCode})';
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    } catch (e) {
+      rethrow;
     }
-    if (e.type == DioExceptionType.connectionTimeout) return 'Превышено время ожидания';
-    if (e.type == DioExceptionType.receiveTimeout) return 'Сервер отвечает слишком долго';
-    return 'Проблемы с интернет-соединением';
+  }
+
+  String _handleDioError(DioException e) {
+    return handleDioError(e, 'Ошибка авторизации');
   }
 }

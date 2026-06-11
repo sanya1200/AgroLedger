@@ -18,7 +18,7 @@ class CalculatorRepository:
     def create_asset(self, user_id: int, data: AssetCreate) -> LivestockAsset:
         asset = LivestockAsset(
             user_id=user_id,
-            category=data.category,
+            category=data.category.value if hasattr(data.category, "value") else data.category,
             breed=data.breed,
             quantity=data.quantity,
             purchase_price=data.purchase_price,
@@ -42,6 +42,8 @@ class CalculatorRepository:
     def update_asset(self, asset: LivestockAsset, data: AssetUpdate) -> LivestockAsset:
         update_fields = data.model_dump(exclude_unset=True)
         for field, value in update_fields.items():
+            if hasattr(value, "value"):
+                value = value.value
             setattr(asset, field, value)
         self.db.commit()
         self.db.refresh(asset)
@@ -54,10 +56,10 @@ class CalculatorRepository:
     def create_expense(self, data: ExpenseCreate) -> LivestockExpenses:
         expense = LivestockExpenses(
             asset_id=data.asset_id,
-            feed_sub_type=data.feed_sub_type,
-            vet_sub_type=data.vet_sub_type,
-            utility_sub_type=data.utility_sub_type,
-            other_sub_type=data.other_sub_type,
+            feed_sub_type=data.feed_sub_type.value if hasattr(data.feed_sub_type, "value") else data.feed_sub_type,
+            vet_sub_type=data.vet_sub_type.value if hasattr(data.vet_sub_type, "value") else data.vet_sub_type,
+            utility_sub_type=data.utility_sub_type.value if hasattr(data.utility_sub_type, "value") else data.utility_sub_type,
+            other_sub_type=data.other_sub_type.value if hasattr(data.other_sub_type, "value") else data.other_sub_type,
             amount=data.amount,
             description=data.description,
             date=data.date,
@@ -90,6 +92,8 @@ class CalculatorRepository:
 
     def update_expense(self, expense: LivestockExpenses, data: ExpenseUpdate) -> LivestockExpenses:
         for field, value in data.model_dump(exclude_unset=True).items():
+            if hasattr(value, "value"):
+                value = value.value
             setattr(expense, field, value)
         self.db.commit()
         self.db.refresh(expense)
@@ -102,7 +106,7 @@ class CalculatorRepository:
     def create_yield(self, data: YieldCreate) -> LivestockYield:
         record = LivestockYield(
             asset_id=data.asset_id,
-            product_sub_type=data.product_sub_type,
+            product_sub_type=data.product_sub_type.value if hasattr(data.product_sub_type, "value") else data.product_sub_type,
             volume=data.volume,
             earnings=data.earnings,
             date=data.date,
@@ -135,6 +139,8 @@ class CalculatorRepository:
 
     def update_yield(self, record: LivestockYield, data: YieldUpdate) -> LivestockYield:
         for field, value in data.model_dump(exclude_unset=True).items():
+            if hasattr(value, "value"):
+                value = value.value
             setattr(record, field, value)
         self.db.commit()
         self.db.refresh(record)

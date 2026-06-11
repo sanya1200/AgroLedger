@@ -11,8 +11,12 @@ class MarketplaceRepository:
         self.db = db
 
     def create_product(self, business_id: int, obj_in: ProductCreate) -> Product:
+        data = obj_in.model_dump()
+        if hasattr(data.get("category"), "value"):
+            data["category"] = data["category"].value
+
         db_obj = Product(
-            **obj_in.model_dump(),
+            **data,
             business_id=business_id,
             is_active=True
         )
@@ -45,7 +49,10 @@ class MarketplaceRepository:
     def update_product(self, db_obj: Product, obj_in: ProductUpdate) -> Product:
         update_data = obj_in.model_dump(exclude_unset=True)
         for field in update_data:
-            setattr(db_obj, field, update_data[field])
+            val = update_data[field]
+            if hasattr(val, "value"):
+                val = val.value
+            setattr(db_obj, field, val)
 
         # Автоматическое скрытие товара, если остаток 0
         if db_obj.stock_quantity <= 0:

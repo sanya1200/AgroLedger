@@ -65,7 +65,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
                 Navigator.pop(context);
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => BusinessSetupScreen()),
+                  MaterialPageRoute(builder: (_) => const BusinessSetupScreen()),
                 );
               },
               style: ElevatedButton.styleFrom(

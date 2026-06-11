@@ -86,7 +86,7 @@ class AssetDropdownField extends StatelessWidget {
         const SizedBox(height: 10),
         DropdownButtonFormField<int>(
           key: ValueKey('asset_dropdown_$selectedAssetId'),
-          value: selectedAssetId,
+          initialValue: selectedAssetId,
           decoration: InputDecoration(
             filled: true,
             fillColor: AppColors.creamSurface,

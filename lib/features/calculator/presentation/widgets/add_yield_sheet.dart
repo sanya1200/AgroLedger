@@ -233,7 +233,7 @@ class _AddYieldSheetState extends State<AddYieldSheet> {
   Widget _buildProductChips() {
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 300),
-      child: Container(
+      child: SizedBox(
         key: ValueKey(_selectedAssetId),
         height: 54,
         child: ListView.builder(

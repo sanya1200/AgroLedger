@@ -146,13 +146,14 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(state.copyWith(status: AuthStatus.loading, errorMessage: null));
     try {
+      await _authRemoteDataSource.setupPin(event.pin);
       final hashedPin = await PinCryptoService.hashPin(event.pin);
       await _storage.write(key: 'user_pin_hash', value: hashedPin);
       emit(state.copyWith(status: AuthStatus.authorized));
     } catch (e) {
       emit(state.copyWith(
         status: AuthStatus.failure,
-        errorMessage: 'Ошибка сохранения ПИН-кода',
+        errorMessage: e.toString().contains('Exception') ? 'Ошибка сохранения ПИН-кода' : e.toString(),
       ));
     }
   }

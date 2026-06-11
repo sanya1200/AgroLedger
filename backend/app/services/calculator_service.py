@@ -139,7 +139,9 @@ class CalculatorService:
         yields = self.db.query(LivestockYield).filter(LivestockYield.asset_id.in_(asset_ids)).all()
         earnings_by_product = {}
         for y in yields:
-            key = y.product_sub_type.value
+            key = y.product_sub_type
+            if hasattr(key, "value"):
+                key = key.value
             earnings_by_product[key] = earnings_by_product.get(key, Decimal("0")) + Decimal(str(y.earnings))
 
         net_profit = total_earnings - total_costs
@@ -172,7 +174,7 @@ class CalculatorService:
         break_even_date = None
 
         # FCR for Poultry Broilers
-        if asset.category == LivestockCategory.POULTRY_BROILERS:
+        if asset.category == LivestockCategory.POULTRY_BROILERS.value:
             total_feed_weight = self.db.query(func.sum(LivestockExpenses.amount)).filter(
                 LivestockExpenses.asset_id == asset_id,
                 LivestockExpenses.feed_sub_type.isnot(None)
@@ -180,7 +182,7 @@ class CalculatorService:
 
             total_meat_yield = self.db.query(func.sum(LivestockYield.volume)).filter(
                 LivestockYield.asset_id == asset_id,
-                LivestockYield.product_sub_type == ProductSubType.MEAT_CARCASS
+                LivestockYield.product_sub_type == ProductSubType.MEAT_CARCASS.value
             ).scalar() or 0
 
             if total_meat_yield > 0:

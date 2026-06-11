@@ -14,7 +14,6 @@ class AppTheme {
         primary: AppColors.sagePrimary,
         secondary: AppColors.sageLight,
         surface: AppColors.creamSurface,
-        background: AppColors.creamBackground,
         error: AppColors.errorSoft,
         onPrimary: Colors.white,
         onSurface: AppColors.textDark,

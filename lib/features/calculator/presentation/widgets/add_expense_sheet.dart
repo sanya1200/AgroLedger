@@ -259,15 +259,20 @@ class _AddExpenseSheetState extends State<AddExpenseSheet> {
 
   Widget _buildSubCategoryChips() {
     List<dynamic> options = [];
-    if (_mainCategory == 'feed') options = FeedSubType.values.where((e) => e != FeedSubType.unknown).toList();
-    else if (_mainCategory == 'vet') options = VetSubType.values.where((e) => e != VetSubType.unknown).toList();
-    else if (_mainCategory == 'utility') options = UtilitySubType.values.where((e) => e != UtilitySubType.unknown).toList();
-    else options = OtherSubType.values.where((e) => e != OtherSubType.unknown).toList();
+    if (_mainCategory == 'feed') {
+      options = FeedSubType.values.where((e) => e != FeedSubType.unknown).toList();
+    } else if (_mainCategory == 'vet') {
+      options = VetSubType.values.where((e) => e != VetSubType.unknown).toList();
+    } else if (_mainCategory == 'utility') {
+      options = UtilitySubType.values.where((e) => e != UtilitySubType.unknown).toList();
+    } else {
+      options = OtherSubType.values.where((e) => e != OtherSubType.unknown).toList();
+    }
 
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 300),
       transitionBuilder: (child, animation) => FadeTransition(opacity: animation, child: SlideTransition(position: Tween<Offset>(begin: const Offset(0.05, 0), end: Offset.zero).animate(animation), child: child)),
-      child: Container(
+      child: SizedBox(
         key: ValueKey(_mainCategory),
         height: 48,
         child: ListView.builder(

@@ -6,7 +6,6 @@ import 'package:agroledger/core/theme/app_colors.dart';
 import 'package:agroledger/core/theme/app_text_styles.dart';
 import 'package:agroledger/core/presentation/widgets/soft_card.dart';
 import 'package:agroledger/features/auth/presentation/bloc/auth_bloc.dart';
-import 'package:agroledger/features/auth/data/models/user_model.dart';
 import 'package:agroledger/features/calculator/data/models/livestock_asset_model.dart';
 import 'package:agroledger/features/calculator/data/models/calculator_summary_model.dart';
 import 'package:agroledger/features/calculator/presentation/bloc/calculator_bloc.dart';
@@ -18,7 +17,6 @@ import 'package:agroledger/features/calculator/presentation/widgets/earnings_sou
 import 'package:agroledger/features/calculator/domain/services/report_export_service.dart';
 import 'package:agroledger/core/di/service_locator.dart';
 import 'package:agroledger/features/calculator/presentation/widgets/add_asset_sheet.dart';
-import 'package:agroledger/features/calculator/data/models/predictive_forecast_model.dart';
 import 'package:agroledger/features/calculator/presentation/widgets/premium_paywall_sheet.dart';
 
 class CalculatorDashboardScreen extends StatefulWidget {
@@ -141,7 +139,12 @@ class _CalculatorDashboardScreenState extends State<CalculatorDashboardScreen> {
         title: 'Экспорт отчётов',
         message: 'Брендированные PDF-отчеты с печатью доступны только в Premium версии. В бесплатной версии доступен базовый CSV экспорт.',
       );
-      await sl<ReportExportService>().exportToCsv(summary);
+      setState(() => _isExporting = true);
+      try {
+        await sl<ReportExportService>().exportToCsv(summary);
+      } finally {
+        setState(() => _isExporting = false);
+      }
       return;
     }
 
@@ -163,18 +166,28 @@ class _CalculatorDashboardScreenState extends State<CalculatorDashboardScreen> {
               leading: const Icon(Icons.picture_as_pdf_rounded, color: AppColors.errorSoft),
               title: const Text('Premium PDF Отчёт'),
               subtitle: const Text('Красивое оформление и таблицы'),
-              onTap: () {
+              onTap: () async {
                 Navigator.pop(context);
-                sl<ReportExportService>().exportToPdf(summary);
+                setState(() => _isExporting = true);
+                try {
+                  await sl<ReportExportService>().exportToPdf(summary);
+                } finally {
+                  setState(() => _isExporting = false);
+                }
               },
             ),
             ListTile(
               leading: const Icon(Icons.table_chart_rounded, color: Colors.green),
               title: const Text('CSV Таблица'),
               subtitle: const Text('Для Excel и анализа данных'),
-              onTap: () {
+              onTap: () async {
                 Navigator.pop(context);
-                sl<ReportExportService>().exportToCsv(summary);
+                setState(() => _isExporting = true);
+                try {
+                  await sl<ReportExportService>().exportToCsv(summary);
+                } finally {
+                  setState(() => _isExporting = false);
+                }
               },
             ),
             const SizedBox(height: 16),
@@ -439,7 +452,7 @@ class _PredictiveForecastSection extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 16),
-                _PredictiveChart(progress: 1.0),
+                const _PredictiveChart(progress: 1.0),
                 const SizedBox(height: 16),
                 if (f.fcr != null) _ForecastRow('Конверсия корма (FCR)', f.fcr!.toStringAsFixed(2), Icons.scale_outlined),
                 if (f.breakEvenDate != null) _ForecastRow('Дата окупаемости', DateFormat('dd.MM.yyyy').format(f.breakEvenDate!), Icons.event_available_rounded),
