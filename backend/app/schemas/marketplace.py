@@ -1,7 +1,7 @@
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Any
 from decimal import Decimal
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from app.models.marketplace import ProductCategory
 
 
@@ -14,6 +14,13 @@ class ProductBase(BaseModel):
     wholesale_min_qty: float = Field(default=1.0, ge=0)
     stock_quantity: float = Field(default=0.0, ge=0)
     image_url: Optional[str] = None
+
+    @field_validator("category", mode="before")
+    @classmethod
+    def coerce_category(cls, v: Any) -> Any:
+        if isinstance(v, str):
+            return v.lower()
+        return v
 
 
 class ProductCreate(ProductBase):
@@ -38,6 +45,6 @@ class ProductResponse(ProductBase):
     id: int
     business_id: int
     is_active: bool
-    created_at: datetime
+    created_at: Optional[datetime] = None
     seller_name: Optional[str] = None
     seller_phone: Optional[str] = None

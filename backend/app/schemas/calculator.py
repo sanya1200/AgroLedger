@@ -1,7 +1,7 @@
 from datetime import datetime
 from decimal import Decimal
-from typing import Optional, Dict, List
-from pydantic import BaseModel, ConfigDict, Field
+from typing import Optional, Dict, List, Any
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from app.models.calculator import (
     LivestockCategory, ProductSubType, FeedSubType,
     VetSubType, UtilitySubType, OtherSubType
@@ -14,12 +14,26 @@ class AssetCreate(BaseModel):
     quantity: float = Field(..., gt=0)
     purchase_price: Decimal = Field(..., ge=0)
 
+    @field_validator("category", mode="before")
+    @classmethod
+    def coerce_category(cls, v: Any) -> Any:
+        if isinstance(v, str):
+            return v.lower()
+        return v
+
 
 class AssetUpdate(BaseModel):
     category: Optional[LivestockCategory] = None
     breed: Optional[str] = Field(None, min_length=1, max_length=255)
     quantity: Optional[float] = Field(None, gt=0)
     purchase_price: Optional[Decimal] = Field(None, ge=0)
+
+    @field_validator("category", mode="before")
+    @classmethod
+    def coerce_category(cls, v: Any) -> Any:
+        if isinstance(v, str):
+            return v.lower()
+        return v
 
 
 class AssetResponse(BaseModel):
@@ -31,7 +45,14 @@ class AssetResponse(BaseModel):
     breed: str
     quantity: float
     purchase_price: Decimal
-    created_at: datetime
+    created_at: Optional[datetime] = None
+
+    @field_validator("category", mode="before")
+    @classmethod
+    def coerce_category(cls, v: Any) -> Any:
+        if isinstance(v, str):
+            return v.lower()
+        return v
 
 
 class ExpenseCreate(BaseModel):
@@ -44,6 +65,13 @@ class ExpenseCreate(BaseModel):
     description: Optional[str] = None
     date: datetime
 
+    @field_validator("feed_sub_type", "vet_sub_type", "utility_sub_type", "other_sub_type", mode="before")
+    @classmethod
+    def coerce_sub_types(cls, v: Any) -> Any:
+        if isinstance(v, str):
+            return v.lower()
+        return v
+
 
 class ExpenseUpdate(BaseModel):
     feed_sub_type: Optional[FeedSubType] = None
@@ -53,6 +81,13 @@ class ExpenseUpdate(BaseModel):
     amount: Optional[Decimal] = Field(None, ge=0)
     description: Optional[str] = None
     date: Optional[datetime] = None
+
+    @field_validator("feed_sub_type", "vet_sub_type", "utility_sub_type", "other_sub_type", mode="before")
+    @classmethod
+    def coerce_sub_types(cls, v: Any) -> Any:
+        if isinstance(v, str):
+            return v.lower()
+        return v
 
 
 class ExpenseResponse(BaseModel):
@@ -66,7 +101,14 @@ class ExpenseResponse(BaseModel):
     other_sub_type: Optional[OtherSubType] = None
     amount: Decimal
     description: Optional[str] = None
-    date: datetime
+    date: Optional[datetime] = None
+
+    @field_validator("feed_sub_type", "vet_sub_type", "utility_sub_type", "other_sub_type", mode="before")
+    @classmethod
+    def coerce_sub_types(cls, v: Any) -> Any:
+        if isinstance(v, str):
+            return v.lower()
+        return v
 
 
 class YieldCreate(BaseModel):
@@ -76,12 +118,26 @@ class YieldCreate(BaseModel):
     earnings: Decimal = Field(..., ge=0)
     date: datetime
 
+    @field_validator("product_sub_type", mode="before")
+    @classmethod
+    def coerce_product_sub_type(cls, v: Any) -> Any:
+        if isinstance(v, str):
+            return v.lower()
+        return v
+
 
 class YieldUpdate(BaseModel):
     product_sub_type: Optional[ProductSubType] = None
     volume: Optional[Decimal] = Field(None, ge=0)
     earnings: Optional[Decimal] = Field(None, ge=0)
     date: Optional[datetime] = None
+
+    @field_validator("product_sub_type", mode="before")
+    @classmethod
+    def coerce_product_sub_type(cls, v: Any) -> Any:
+        if isinstance(v, str):
+            return v.lower()
+        return v
 
 
 class YieldResponse(BaseModel):
@@ -92,7 +148,14 @@ class YieldResponse(BaseModel):
     product_sub_type: ProductSubType
     volume: Decimal
     earnings: Decimal
-    date: datetime
+    date: Optional[datetime] = None
+
+    @field_validator("product_sub_type", mode="before")
+    @classmethod
+    def coerce_product_sub_type(cls, v: Any) -> Any:
+        if isinstance(v, str):
+            return v.lower()
+        return v
 
 
 class PredictiveForecastResponse(BaseModel):
@@ -103,6 +166,13 @@ class PredictiveForecastResponse(BaseModel):
     is_profitable: bool
     estimated_monthly_profit: Decimal
     advice: str
+
+    @field_validator("category", mode="before")
+    @classmethod
+    def coerce_category(cls, v: Any) -> Any:
+        if isinstance(v, str):
+            return v.lower()
+        return v
 
 
 class CalculatorSummaryResponse(BaseModel):
