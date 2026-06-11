@@ -84,6 +84,7 @@ def run_migrations():
                         ))
                         conn.commit()
                 except Exception as e:
+                    conn.rollback()
                     logger.warning(f"Could not migrate column {column} in users: {e}")
 
             # Migrations for livestock_assets
@@ -105,6 +106,7 @@ def run_migrations():
                         conn.execute(text(f"ALTER TABLE livestock_assets ALTER COLUMN {column} TYPE {col_type}"))
                     conn.commit()
                 except Exception as e:
+                    conn.rollback()
                     logger.warning(f"Could not migrate column {column} in livestock_assets: {e}")
 
             # Migrations for livestock_expenses
@@ -133,6 +135,7 @@ def run_migrations():
                                 pass
                     conn.commit()
                 except Exception as e:
+                    conn.rollback()
                     logger.warning(f"Could not migrate column {column} in livestock_expenses: {e}")
 
             # Migrations for livestock_yields
@@ -150,6 +153,7 @@ def run_migrations():
                         conn.execute(text(f"ALTER TABLE livestock_yields ADD COLUMN {column} {col_type}"))
                     conn.commit()
                 except Exception as e:
+                    conn.rollback()
                     logger.warning(f"Could not migrate column {column} in livestock_yields: {e}")
 
             # Migrations for products
@@ -169,10 +173,12 @@ def run_migrations():
                         logger.info(f"Adding column {column} to products table...")
                         conn.execute(text(f"ALTER TABLE products ADD COLUMN {column} {col_type}"))
                     else:
-                        # Ensure correct type
-                        conn.execute(text(f"ALTER TABLE products ALTER COLUMN {column} TYPE {col_type}"))
+                        # Ensure correct type - strip DEFAULT for ALTER TYPE
+                        base_type = col_type.split(" DEFAULT")[0]
+                        conn.execute(text(f"ALTER TABLE products ALTER COLUMN {column} TYPE {base_type}"))
                     conn.commit()
                 except Exception as e:
+                    conn.rollback()
                     logger.warning(f"Could not migrate column {column} in products: {e}")
 
             session_columns = {
@@ -197,6 +203,7 @@ def run_migrations():
                         ))
                         conn.commit()
                 except Exception as e:
+                    conn.rollback()
                     logger.warning(f"Could not migrate user_sessions column {column}: {e}")
 
             verification_columns = {
@@ -213,6 +220,7 @@ def run_migrations():
                         conn.execute(text(f"ALTER TABLE verification_codes ADD COLUMN {column} {col_type}"))
                         conn.commit()
                 except Exception as e:
+                    conn.rollback()
                     logger.warning(f"Could not migrate column {column} in verification_codes: {e}")
 
             logger.info("Migrations completed.")
