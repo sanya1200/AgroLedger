@@ -42,6 +42,9 @@ COPY --from=builder /opt/venv /opt/venv
 # Копируем исходный код
 COPY . .
 
+# Исправляем окончания строк (CRLF -> LF) и делаем entrypoint исполняемым
+RUN sed -i 's/\r$//' entrypoint.sh && chmod +x entrypoint.sh
+
 # Создаем пользователя без root-прав для безопасности
 RUN useradd -m -s /bin/bash appuser && \
     chown -R appuser:appuser /app
@@ -49,10 +52,6 @@ RUN useradd -m -s /bin/bash appuser && \
 USER appuser
 
 EXPOSE 8000
-
-# Создаем entrypoint для авто-прогона миграций перед запуском
-COPY --chown=appuser:appuser entrypoint.sh /app/entrypoint.sh
-RUN chmod +x /app/entrypoint.sh
 
 ENTRYPOINT ["/app/entrypoint.sh"]
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
