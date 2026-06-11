@@ -27,6 +27,7 @@ class FeedSubType(str, enum.Enum):
     CONCENTRATES = "concentrates"      # Концентраты
     PRESTARTER = "prestarter"          # Престартер
     COMPOUND_FEED = "compound_feed"    # Комбикорм
+    UNKNOWN = "unknown"
 
 
 class VetSubType(str, enum.Enum):
@@ -35,6 +36,7 @@ class VetSubType(str, enum.Enum):
     INSEMINATION = "insemination"      # Осеменение/Случка
     VITAMINS = "vitamins"              # Витамины
     VET_VISIT = "vet_visit"            # Вызов ветеринара
+    UNKNOWN = "unknown"
 
 
 class UtilitySubType(str, enum.Enum):
@@ -42,6 +44,7 @@ class UtilitySubType(str, enum.Enum):
     WATER_SUPPLY = "water"
     HEATING = "heating"
     VENTILATION = "ventilation"
+    UNKNOWN = "unknown"
 
 
 class OtherSubType(str, enum.Enum):
@@ -49,6 +52,7 @@ class OtherSubType(str, enum.Enum):
     TAGS_CHIPS = "tags_chips"
     SLAUGHTER_SHEARING = "slaughter_shearing"
     BEDDING = "bedding"
+    UNKNOWN = "unknown"
 
 
 # Detailed Product Types (Yields)
@@ -69,6 +73,7 @@ class ProductSubType(str, enum.Enum):
     PROPOLIS = "propolis"
     POLLEN = "pollen"
     FUR = "fur"
+    UNKNOWN = "unknown"
 
 
 class LivestockAsset(Base):
