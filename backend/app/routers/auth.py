@@ -187,9 +187,9 @@ def clear_db_temp(db: Session = Depends(get_db)):
         "user_sessions",
         "livestock_yields",
         "livestock_expenses",
-        "livestock_assets",
+        "livestock_tasks",
         "products",
-        "calendar_events",
+        "livestock_assets",
         "business_profiles",
         "users"
     ]
