@@ -76,7 +76,7 @@ class LivestockAsset(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False, index=True)
-    category: Mapped[LivestockCategory] = mapped_column(Enum(LivestockCategory), nullable=False)
+    category: Mapped[str] = mapped_column(String(50), nullable=False)
     breed: Mapped[str] = mapped_column(String(255), nullable=False)
     quantity: Mapped[float] = mapped_column(Numeric(precision=14, scale=2), nullable=False)
     purchase_price: Mapped[float] = mapped_column(Numeric(precision=14, scale=2), nullable=False)
@@ -99,10 +99,10 @@ class LivestockExpenses(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     asset_id: Mapped[int] = mapped_column(Integer, ForeignKey("livestock_assets.id"), nullable=False, index=True)
 
-    feed_sub_type: Mapped[Optional[FeedSubType]] = mapped_column(Enum(FeedSubType), nullable=True)
-    vet_sub_type: Mapped[Optional[VetSubType]] = mapped_column(Enum(VetSubType), nullable=True)
-    utility_sub_type: Mapped[Optional[UtilitySubType]] = mapped_column(Enum(UtilitySubType), nullable=True)
-    other_sub_type: Mapped[Optional[OtherSubType]] = mapped_column(Enum(OtherSubType), nullable=True)
+    feed_sub_type: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    vet_sub_type: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    utility_sub_type: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    other_sub_type: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
 
     amount: Mapped[float] = mapped_column(Numeric(precision=14, scale=2), nullable=False)
     description: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
@@ -117,7 +117,7 @@ class LivestockYield(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     asset_id: Mapped[int] = mapped_column(Integer, ForeignKey("livestock_assets.id"), nullable=False, index=True)
 
-    product_sub_type: Mapped[ProductSubType] = mapped_column(Enum(ProductSubType), nullable=False)
+    product_sub_type: Mapped[str] = mapped_column(String(50), nullable=False)
     volume: Mapped[float] = mapped_column(Numeric(precision=14, scale=2), nullable=False)
     earnings: Mapped[float] = mapped_column(Numeric(precision=14, scale=2), nullable=False)
     date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

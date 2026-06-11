@@ -23,7 +23,7 @@ class Product(Base):
 
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    category: Mapped[ProductCategory] = mapped_column(Enum(ProductCategory), nullable=False)
+    category: Mapped[str] = mapped_column(String(50), nullable=False)
 
     price_retail: Mapped[float] = mapped_column(Numeric(precision=12, scale=2), nullable=False)
     price_wholesale: Mapped[Optional[float]] = mapped_column(Numeric(precision=12, scale=2), nullable=True)

@@ -93,6 +93,22 @@ class CalculatorService:
             assets = self.repository.get_assets_by_user(user_id)
 
         asset_ids = [asset.id for asset in assets]
+        if not asset_ids:
+            return CalculatorSummaryResponse(
+                asset_id=asset_id,
+                assets_count=0,
+                initial_investment=Decimal("0"),
+                total_feed_cost=Decimal("0"),
+                total_vet_cost=Decimal("0"),
+                total_utility_cost=Decimal("0"),
+                total_other_cost=Decimal("0"),
+                operating_expenses=Decimal("0"),
+                total_costs=Decimal("0"),
+                total_earnings=Decimal("0"),
+                earnings_by_product={},
+                net_profit=Decimal("0"),
+                roi=0.0,
+            )
 
         initial_investment = sum((Decimal(str(a.purchase_price)) for a in assets), Decimal("0"))
 

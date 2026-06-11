@@ -80,7 +80,16 @@ def run_migrations():
             }
             for column, col_type in asset_columns.items():
                 try:
-                    conn.execute(text(f"ALTER TABLE livestock_assets ALTER COLUMN {column} TYPE {col_type}"))
+                    check_sql = text(
+                        f"SELECT column_name FROM information_schema.columns "
+                        f"WHERE table_name='livestock_assets' AND column_name='{column}'"
+                    )
+                    if not conn.execute(check_sql).fetchone():
+                        logger.info(f"Adding column {column} to livestock_assets table...")
+                        conn.execute(text(f"ALTER TABLE livestock_assets ADD COLUMN {column} {col_type}"))
+                    else:
+                        logger.info(f"Ensuring column {column} in livestock_assets has correct type...")
+                        conn.execute(text(f"ALTER TABLE livestock_assets ALTER COLUMN {column} TYPE {col_type}"))
                     conn.commit()
                 except Exception as e:
                     logger.warning(f"Could not migrate column {column} in livestock_assets: {e}")
@@ -103,7 +112,13 @@ def run_migrations():
                     if not conn.execute(check_sql).fetchone():
                         logger.info(f"Adding column {column} to livestock_expenses table...")
                         conn.execute(text(f"ALTER TABLE livestock_expenses ADD COLUMN {column} {col_type}"))
-                        conn.commit()
+                        # If we just added 'amount', try to populate it from old columns if they exist
+                        if column == "amount":
+                            try:
+                                conn.execute(text("UPDATE livestock_expenses SET amount = COALESCE(feed_cost, 0) + COALESCE(vet_cost, 0) + COALESCE(utility_cost, 0) + COALESCE(other_cost, 0)"))
+                            except:
+                                pass
+                    conn.commit()
                 except Exception as e:
                     logger.warning(f"Could not migrate column {column} in livestock_expenses: {e}")
 
@@ -120,9 +135,32 @@ def run_migrations():
                     if not conn.execute(check_sql).fetchone():
                         logger.info(f"Adding column {column} to livestock_yields table...")
                         conn.execute(text(f"ALTER TABLE livestock_yields ADD COLUMN {column} {col_type}"))
-                        conn.commit()
+                    conn.commit()
                 except Exception as e:
                     logger.warning(f"Could not migrate column {column} in livestock_yields: {e}")
+
+            # Migrations for products
+            product_columns = {
+                "category": "VARCHAR(50)",
+                "price_retail": "NUMERIC(12,2)",
+                "price_wholesale": "NUMERIC(12,2)",
+                "is_active": "BOOLEAN DEFAULT TRUE",
+            }
+            for column, col_type in product_columns.items():
+                try:
+                    check_sql = text(
+                        f"SELECT column_name FROM information_schema.columns "
+                        f"WHERE table_name='products' AND column_name='{column}'"
+                    )
+                    if not conn.execute(check_sql).fetchone():
+                        logger.info(f"Adding column {column} to products table...")
+                        conn.execute(text(f"ALTER TABLE products ADD COLUMN {column} {col_type}"))
+                    else:
+                        # Ensure correct type
+                        conn.execute(text(f"ALTER TABLE products ALTER COLUMN {column} TYPE {col_type}"))
+                    conn.commit()
+                except Exception as e:
+                    logger.warning(f"Could not migrate column {column} in products: {e}")
 
             session_columns = {
                 "refresh_jti": "VARCHAR(36)",
@@ -214,12 +252,17 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 async def global_exception_handler(request: Request, exc: Exception):
     logger.error(f"Critical System Error: {exc}", exc_info=True)
 
+    # Try to extract more info from DB errors
+    error_msg = str(exc)
+    if "psycopg2" in error_msg or "sqlalchemy" in error_msg:
+        error_msg = f"Database Error: {error_msg}"
+
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={
             "success": False,
             "data": None,
-            "error": f"Server Error: {str(exc)}" if getattr(settings, "DEBUG", True) else "A critical error occurred on the server."
+            "error": f"Server Error: {error_msg}" if getattr(settings, "DEBUG", True) else "A critical error occurred on the server."
         },
     )
 

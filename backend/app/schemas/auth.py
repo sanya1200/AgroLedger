@@ -61,5 +61,7 @@ class UserDetailResponse(BaseModel):
     role: str
     is_biometric_enabled: bool = False
     is_verified: bool = False
+    is_premium: bool = False
+    premium_until: Optional[datetime] = None
     created_at: Optional[datetime] = Field(default=None)
     has_business_profile: bool = False
