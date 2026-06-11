@@ -1,3 +1,4 @@
+import re
 from datetime import datetime
 from decimal import Decimal
 from typing import Optional, Dict, List, Any
@@ -69,7 +70,7 @@ class ExpenseCreate(BaseModel):
     @classmethod
     def coerce_sub_types(cls, v: Any) -> Any:
         if isinstance(v, str):
-            return v.lower()
+            return re.sub(r'(?<!^)(?=[A-Z])', '_', v).lower()
         return v
 
 
@@ -86,7 +87,7 @@ class ExpenseUpdate(BaseModel):
     @classmethod
     def coerce_sub_types(cls, v: Any) -> Any:
         if isinstance(v, str):
-            return v.lower()
+            return re.sub(r'(?<!^)(?=[A-Z])', '_', v).lower()
         return v
 
 
@@ -107,7 +108,7 @@ class ExpenseResponse(BaseModel):
     @classmethod
     def coerce_sub_types(cls, v: Any) -> Any:
         if isinstance(v, str):
-            return v.lower()
+            return re.sub(r'(?<!^)(?=[A-Z])', '_', v).lower()
         return v
 
 
@@ -122,7 +123,7 @@ class YieldCreate(BaseModel):
     @classmethod
     def coerce_product_sub_type(cls, v: Any) -> Any:
         if isinstance(v, str):
-            return v.lower()
+            return re.sub(r'(?<!^)(?=[A-Z])', '_', v).lower()
         return v
 
 
@@ -136,7 +137,7 @@ class YieldUpdate(BaseModel):
     @classmethod
     def coerce_product_sub_type(cls, v: Any) -> Any:
         if isinstance(v, str):
-            return v.lower()
+            return re.sub(r'(?<!^)(?=[A-Z])', '_', v).lower()
         return v
 
 
@@ -154,7 +155,7 @@ class YieldResponse(BaseModel):
     @classmethod
     def coerce_product_sub_type(cls, v: Any) -> Any:
         if isinstance(v, str):
-            return v.lower()
+            return re.sub(r'(?<!^)(?=[A-Z])', '_', v).lower()
         return v
 
 

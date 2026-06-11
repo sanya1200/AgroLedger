@@ -1,6 +1,7 @@
 from datetime import datetime
-from typing import Optional
-from pydantic import BaseModel, ConfigDict, Field
+from typing import Optional, Any
+import re
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from app.models.calendar import TaskType
 
 
@@ -11,6 +12,13 @@ class TaskCreate(BaseModel):
     planned_date: datetime
     task_type: TaskType = TaskType.GENERAL
 
+    @field_validator("task_type", mode="before")
+    @classmethod
+    def coerce_task_type(cls, v: Any) -> Any:
+        if isinstance(v, str):
+            return re.sub(r'(?<!^)(?=[A-Z])', '_', v).lower()
+        return v
+
 
 class TaskUpdate(BaseModel):
     title: Optional[str] = Field(None, min_length=1, max_length=255)
@@ -18,6 +26,13 @@ class TaskUpdate(BaseModel):
     planned_date: Optional[datetime] = None
     is_completed: Optional[bool] = None
     task_type: Optional[TaskType] = None
+
+    @field_validator("task_type", mode="before")
+    @classmethod
+    def coerce_task_type(cls, v: Any) -> Any:
+        if isinstance(v, str):
+            return re.sub(r'(?<!^)(?=[A-Z])', '_', v).lower()
+        return v
 
 
 class TaskResponse(BaseModel):
