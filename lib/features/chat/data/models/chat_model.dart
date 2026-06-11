@@ -38,6 +38,26 @@ class ChatMessage {
   }
 }
 
+class ChatUser {
+  final int id;
+  final String? fullName;
+  final String? avatarUrl;
+
+  ChatUser({
+    required this.id,
+    this.fullName,
+    this.avatarUrl,
+  });
+
+  factory ChatUser.fromJson(Map<String, dynamic> json) {
+    return ChatUser(
+      id: json['id'],
+      fullName: json['full_name'],
+      avatarUrl: json['avatar_url'],
+    );
+  }
+}
+
 class ChatRoom {
   final int id;
   final int productId;
@@ -45,8 +65,8 @@ class ChatRoom {
   final int sellerId;
   final DateTime createdAt;
   final List<ChatMessage> messages;
-  final dynamic buyer;
-  final dynamic seller;
+  final ChatUser? buyer;
+  final ChatUser? seller;
 
   ChatRoom({
     required this.id,
@@ -70,8 +90,8 @@ class ChatRoom {
               ?.map((e) => ChatMessage.fromJson(Map<String, dynamic>.from(e)))
               .toList() ??
           [],
-      buyer: json['buyer'],
-      seller: json['seller'],
+      buyer: json['buyer'] != null ? ChatUser.fromJson(Map<String, dynamic>.from(json['buyer'])) : null,
+      seller: json['seller'] != null ? ChatUser.fromJson(Map<String, dynamic>.from(json['seller'])) : null,
     );
   }
 }

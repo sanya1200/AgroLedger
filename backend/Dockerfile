@@ -1,14 +1,11 @@
-# Используем легковесный образ Python
-FROM python:3.11-slim
+# Stage 1: Builder
+FROM python:3.11-slim as builder
 
-# Устанавливаем переменные окружения для предотвращения записи .pyc файлов и буферизации вывода
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
 
-# Устанавливаем рабочую директорию
 WORKDIR /app
 
-# Устанавливаем системные зависимости для psycopg2 и сборки пакетов
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libpq-dev \
@@ -16,16 +13,46 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Копируем зависимости и устанавливаем их
+# Создаем виртуальное окружение и устанавливаем зависимости
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
 COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
-# Копируем исходный код приложения
+# Stage 2: Final
+FROM python:3.11-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PATH="/opt/venv/bin:$PATH"
+
+# Устанавливаем только необходимые системные зависимости для работы с БД (psycopg2)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq5 \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Копируем виртуальное окружение из builder stage
+COPY --from=builder /opt/venv /opt/venv
+
+# Копируем исходный код
 COPY . .
 
-# Открываем порт 8000
+# Создаем пользователя без root-прав для безопасности
+RUN useradd -m -s /bin/bash appuser && \
+    chown -R appuser:appuser /app
+
+USER appuser
+
 EXPOSE 8000
 
-# Команда запуска через uvicorn
+# Создаем entrypoint для авто-прогона миграций перед запуском
+COPY --chown=appuser:appuser entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
+ENTRYPOINT ["/app/entrypoint.sh"]
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]

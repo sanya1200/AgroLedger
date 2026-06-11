@@ -25,6 +25,12 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     context.read<ChatBloc>().add(LoadMessagesRequested(widget.roomId));
   }
 
+  @override
+  void dispose() {
+    _messageController.dispose();
+    super.dispose();
+  }
+
   void _sendMessage() {
     final text = _messageController.text.trim();
     if (text.isNotEmpty) {

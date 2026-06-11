@@ -37,6 +37,25 @@ class DioClient {
             return handler.next(options);
           },
           onError: (DioException e, handler) async {
+            if (_isNetworkError(e)) {
+              if (e.requestOptions.extra['retry_count'] == null) {
+                e.requestOptions.extra['retry_count'] = 0;
+              }
+              final retryCount = e.requestOptions.extra['retry_count'] as int;
+              if (retryCount < 2) {
+                e.requestOptions.extra['retry_count'] = retryCount + 1;
+                await Future.delayed(Duration(seconds: 2 * (retryCount + 1)));
+                try {
+                  final retryResponse = await _dio.fetch(e.requestOptions);
+                  return handler.resolve(retryResponse);
+                } catch (retryError) {
+                  if (retryError is DioException) {
+                    e = retryError;
+                  }
+                }
+              }
+            }
+
             if (!_shouldAttemptRefresh(e)) {
               return handler.next(e);
             }
@@ -63,6 +82,13 @@ class DioClient {
           },
         ),
       );
+  }
+
+  bool _isNetworkError(DioException e) {
+    return e.type == DioExceptionType.connectionTimeout ||
+        e.type == DioExceptionType.receiveTimeout ||
+        e.type == DioExceptionType.connectionError ||
+        e.type == DioExceptionType.unknown;
   }
 
   bool _shouldAttemptRefresh(DioException e) {

@@ -267,16 +267,45 @@ class _CatalogScreenState extends State<CatalogScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.inventory_2_outlined, size: 64, color: AppColors.sageLight.withValues(alpha: 0.5)),
-          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: AppColors.sageLight.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(Icons.search_off_rounded, size: 72, color: AppColors.sagePrimary.withValues(alpha: 0.7)),
+          ),
+          const SizedBox(height: 24),
           Text(
             'Товары не найдены',
-            style: AppTextStyles.h2.copyWith(color: AppColors.textLight),
+            style: AppTextStyles.h2.copyWith(color: AppColors.sageDark),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           Text(
-            'Попробуйте выбрать другую категорию',
-            style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textLight),
+            'Попробуйте изменить параметры поиска\nили сбросить фильтры',
+            textAlign: TextAlign.center,
+            style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textLight, height: 1.4),
+          ),
+          const SizedBox(height: 24),
+          OutlinedButton.icon(
+            onPressed: () {
+              setState(() {
+                _searchController.clear();
+                _searchQuery = '';
+                _selectedCategory = 'all';
+                _minPrice = null;
+                _maxPrice = null;
+              });
+              _fetchProducts();
+            },
+            icon: const Icon(Icons.refresh_rounded),
+            label: const Text('Сбросить фильтры'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppColors.sagePrimary,
+              side: const BorderSide(color: AppColors.sagePrimary),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            ),
           ),
         ],
       ),

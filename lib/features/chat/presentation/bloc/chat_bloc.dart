@@ -28,8 +28,10 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     try {
       final rooms = await _dataSource.getRooms();
       emit(ChatRoomsLoaded(rooms));
-    } catch (e) {
+    } on Exception catch (e) {
       emit(ChatFailure(e.toString()));
+    } catch (e) {
+      emit(ChatFailure('Unknown error: $e'));
     }
   }
 
@@ -38,8 +40,10 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     try {
       final room = await _dataSource.getOrCreateRoom(event.productId, event.sellerId);
       emit(ChatRoomCreated(room));
-    } catch (e) {
+    } on Exception catch (e) {
       emit(ChatFailure(e.toString()));
+    } catch (e) {
+      emit(ChatFailure('Unknown error: $e'));
     }
   }
 
@@ -48,8 +52,10 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     try {
       _currentMessages = await _dataSource.getRoomMessages(event.roomId);
       emit(ChatMessagesLoaded(List.from(_currentMessages)));
-    } catch (e) {
+    } on Exception catch (e) {
       emit(ChatFailure(e.toString()));
+    } catch (e) {
+      emit(ChatFailure('Unknown error: $e'));
     }
   }
 
@@ -69,8 +75,10 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
           add(DisconnectWebSocketRequested());
         },
       );
+    } on Exception catch (e) {
+      emit(ChatFailure('WebSocket connection failed: $e'));
     } catch (e) {
-      // Handle connection error silently or emit failure
+      emit(ChatFailure('Unknown error during connection: $e'));
     }
   }
 

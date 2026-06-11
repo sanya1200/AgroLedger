@@ -9,7 +9,7 @@ abstract class ChatRemoteDataSource {
   Future<List<ChatRoom>> getRooms();
   Future<ChatRoom> getOrCreateRoom(int productId, int sellerId);
   Future<List<ChatMessage>> getRoomMessages(int roomId);
-  WebSocketChannel connectToChatWebSocket();
+  Future<WebSocketChannel> connectToChatWebSocketWithToken();
 }
 
 class ChatRemoteDataSourceImpl implements ChatRemoteDataSource {
@@ -18,8 +18,8 @@ class ChatRemoteDataSourceImpl implements ChatRemoteDataSource {
 
   ChatRemoteDataSourceImpl(this._client, this._storage);
 
-  dynamic _unwrap(dynamic responseData) {
-    if (responseData is Map) {
+  Object? _unwrap(Object? responseData) {
+    if (responseData is Map<String, dynamic>) {
       if (responseData['success'] == true) {
         return responseData['data'];
       }
@@ -51,7 +51,7 @@ class ChatRemoteDataSourceImpl implements ChatRemoteDataSource {
         queryParameters: {'product_id': productId, 'seller_id': sellerId},
       );
       final data = _unwrap(response.data);
-      return ChatRoom.fromJson(Map<String, dynamic>.from(data));
+      return ChatRoom.fromJson(Map<String, dynamic>.from(data as Map));
     } on DioException catch (e) {
       throw handleDioError(e, 'Ошибка создания чата');
     } catch (e) {
@@ -75,17 +75,11 @@ class ChatRemoteDataSourceImpl implements ChatRemoteDataSource {
   }
 
   @override
-  WebSocketChannel connectToChatWebSocket() {
-    // The actual token logic needs to be handled before calling this, or synchronously if possible.
-    // However, since connect is synchronous in WebSocketChannel.connect, we'll return a placeholder
-    // or let the caller pass the token. Wait, we can't do async inside a synchronous method easily.
-    // Let's modify the interface to accept the token.
-    throw UnimplementedError('Use connectToChatWebSocketWithToken instead');
-  }
-
   Future<WebSocketChannel> connectToChatWebSocketWithToken() async {
     final token = await _storage.read(key: 'auth_token');
-    // Adjust to your actual backend WS URL. Assuming DioClient has baseUrl.
+    if (token == null) {
+      throw Exception('Необходима авторизация для подключения к чату');
+    }
     final baseUrl = _client.dio.options.baseUrl.replaceFirst('http', 'ws');
     final wsUrl = '${baseUrl}chat/ws/$token';
     return WebSocketChannel.connect(Uri.parse(wsUrl));

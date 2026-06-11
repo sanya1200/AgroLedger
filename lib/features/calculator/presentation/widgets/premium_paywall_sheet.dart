@@ -77,9 +77,7 @@ class PremiumPaywallSheet extends StatelessWidget {
                     const SizedBox(height: 48),
                     _ActionButton(onTap: () {
                       Navigator.pop(context);
-                      // Trigger mock subscription activation
                       context.read<CalculatorBloc>().add(ActivatePremiumDebugEvent());
-                      // Explicitly refresh profile to update isPremium status in UI
                       context.read<AuthBloc>().add(AuthCheckStatusRequested());
                     }),
                     const SizedBox(height: 16),

@@ -616,7 +616,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textLight),
                         ),
                       ],
-                      // Mock verification stepper flow
                       if (!user.isVerified) ...[
                         const Divider(height: 24),
                         if (_verificationStep == 0)

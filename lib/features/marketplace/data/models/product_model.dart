@@ -37,21 +37,21 @@ class ProductModel extends Equatable {
 
   factory ProductModel.fromJson(Map<String, dynamic> json) {
     return ProductModel(
-      id: json['id'] as int,
-      businessId: json['business_id'] as int,
-      title: json['title'] as String,
+      id: json['id'] as int? ?? 0,
+      businessId: json['business_id'] as int? ?? 0,
+      title: json['title'] as String? ?? 'Без названия',
       description: json['description'] as String?,
-      category: json['category'] as String,
-      priceRetail: double.parse(json['price_retail'].toString()),
+      category: json['category'] as String? ?? 'other',
+      priceRetail: double.tryParse(json['price_retail']?.toString() ?? '0') ?? 0.0,
       priceWholesale: json['price_wholesale'] != null 
-          ? double.parse(json['price_wholesale'].toString()) 
+          ? double.tryParse(json['price_wholesale'].toString()) 
           : null,
-      wholesaleMinQty: double.parse(json['wholesale_min_qty'].toString()),
+      wholesaleMinQty: double.tryParse(json['wholesale_min_qty']?.toString() ?? '0') ?? 0.0,
       imageUrl: json['image_url'] as String?,
-      stockQuantity: double.parse(json['stock_quantity'].toString()),
-      isActive: json['is_active'] as bool,
+      stockQuantity: double.tryParse(json['stock_quantity']?.toString() ?? '0') ?? 0.0,
+      isActive: json['is_active'] as bool? ?? false,
       createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'].toString())
+          ? DateTime.tryParse(json['created_at'].toString())
           : null,
       sellerName: json['seller_name'] as String?,
       sellerPhone: json['seller_phone'] as String?,

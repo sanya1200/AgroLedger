@@ -17,7 +17,7 @@ class AssetCreate(BaseModel):
 
     @field_validator("category", mode="before")
     @classmethod
-    def coerce_category(cls, v: Any) -> Any:
+    def coerce_category(cls, v: object) -> object:
         if isinstance(v, str):
             return v.lower()
         return v
@@ -31,7 +31,7 @@ class AssetUpdate(BaseModel):
 
     @field_validator("category", mode="before")
     @classmethod
-    def coerce_category(cls, v: Any) -> Any:
+    def coerce_category(cls, v: object) -> object:
         if isinstance(v, str):
             return v.lower()
         return v
@@ -50,7 +50,7 @@ class AssetResponse(BaseModel):
 
     @field_validator("category", mode="before")
     @classmethod
-    def coerce_category(cls, v: Any) -> Any:
+    def coerce_category(cls, v: object) -> object:
         if isinstance(v, str):
             return v.lower()
         return v
@@ -68,7 +68,7 @@ class ExpenseCreate(BaseModel):
 
     @field_validator("feed_sub_type", "vet_sub_type", "utility_sub_type", "other_sub_type", mode="before")
     @classmethod
-    def coerce_sub_types(cls, v: Any) -> Any:
+    def coerce_sub_types(cls, v: object) -> object:
         if isinstance(v, str):
             return re.sub(r'(?<!^)(?=[A-Z])', '_', v).lower()
         return v
@@ -85,7 +85,7 @@ class ExpenseUpdate(BaseModel):
 
     @field_validator("feed_sub_type", "vet_sub_type", "utility_sub_type", "other_sub_type", mode="before")
     @classmethod
-    def coerce_sub_types(cls, v: Any) -> Any:
+    def coerce_sub_types(cls, v: object) -> object:
         if isinstance(v, str):
             return re.sub(r'(?<!^)(?=[A-Z])', '_', v).lower()
         return v
@@ -106,7 +106,7 @@ class ExpenseResponse(BaseModel):
 
     @field_validator("feed_sub_type", "vet_sub_type", "utility_sub_type", "other_sub_type", mode="before")
     @classmethod
-    def coerce_sub_types(cls, v: Any) -> Any:
+    def coerce_sub_types(cls, v: object) -> object:
         if isinstance(v, str):
             return re.sub(r'(?<!^)(?=[A-Z])', '_', v).lower()
         return v
@@ -121,7 +121,7 @@ class YieldCreate(BaseModel):
 
     @field_validator("product_sub_type", mode="before")
     @classmethod
-    def coerce_product_sub_type(cls, v: Any) -> Any:
+    def coerce_product_sub_type(cls, v: object) -> object:
         if isinstance(v, str):
             return re.sub(r'(?<!^)(?=[A-Z])', '_', v).lower()
         return v
@@ -135,7 +135,7 @@ class YieldUpdate(BaseModel):
 
     @field_validator("product_sub_type", mode="before")
     @classmethod
-    def coerce_product_sub_type(cls, v: Any) -> Any:
+    def coerce_product_sub_type(cls, v: object) -> object:
         if isinstance(v, str):
             return re.sub(r'(?<!^)(?=[A-Z])', '_', v).lower()
         return v
@@ -153,7 +153,7 @@ class YieldResponse(BaseModel):
 
     @field_validator("product_sub_type", mode="before")
     @classmethod
-    def coerce_product_sub_type(cls, v: Any) -> Any:
+    def coerce_product_sub_type(cls, v: object) -> object:
         if isinstance(v, str):
             return re.sub(r'(?<!^)(?=[A-Z])', '_', v).lower()
         return v
@@ -170,7 +170,7 @@ class PredictiveForecastResponse(BaseModel):
 
     @field_validator("category", mode="before")
     @classmethod
-    def coerce_category(cls, v: Any) -> Any:
+    def coerce_category(cls, v: object) -> object:
         if isinstance(v, str):
             return v.lower()
         return v
