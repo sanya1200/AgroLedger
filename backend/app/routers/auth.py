@@ -81,7 +81,30 @@ def update_settings(
         user.is_biometric_enabled = data.is_biometric_enabled
     if data.full_name is not None:
         user.full_name = data.full_name
+    if data.phone is not None:
+        from app.models.user import User as DBUser
+        existing = db.query(DBUser).filter(DBUser.phone == data.phone, DBUser.id != current_user.id).first()
+        if existing:
+            raise HTTPException(status_code=400, detail="Этот номер телефона уже используется")
+        user.phone = data.phone
+    if data.role is not None:
+        user.role = data.role
 
+    db.commit()
+    db.refresh(user)
+    return BaseResponse(data=UserDetailResponse.model_validate(user))
+
+@router.post("/verify-user", response_model=BaseResponse[UserDetailResponse])
+def verify_user(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Verifies the user profile by setting is_verified to True."""
+    repo = UserRepository(db)
+    user = repo.get_user_by_id(current_user.id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    user.is_verified = True
     db.commit()
     db.refresh(user)
     return BaseResponse(data=UserDetailResponse.model_validate(user))

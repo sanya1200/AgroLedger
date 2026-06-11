@@ -11,6 +11,8 @@ class AnimatedInputField extends StatefulWidget {
   final TextInputType keyboardType;
   final int maxLines;
 
+  final bool labelAbove;
+
   const AnimatedInputField({
     super.key,
     required this.controller,
@@ -20,6 +22,7 @@ class AnimatedInputField extends StatefulWidget {
     this.validator,
     this.keyboardType = TextInputType.text,
     this.maxLines = 1,
+    this.labelAbove = false,
   });
 
   @override
@@ -50,44 +53,68 @@ class _AnimatedInputFieldState extends State<AnimatedInputField> {
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      child: TextFormField(
-        controller: widget.controller,
-        focusNode: _focusNode,
-        obscureText: widget.isPassword ? _obscureText : false,
-        keyboardType: widget.keyboardType,
-        style: AppTextStyles.bodyMax,
-        validator: widget.validator,
-        maxLines: widget.isPassword ? 1 : widget.maxLines,
-        decoration: InputDecoration(
-          labelText: widget.label,
-          prefixIcon: AnimatedOpacity(
-            duration: const Duration(milliseconds: 300),
-            opacity: _isFocused ? 1.0 : 0.5,
-            child: Icon(
-              widget.prefixIcon,
-              color: _isFocused ? AppColors.sagePrimary : AppColors.textLight,
+    final inputField = TextFormField(
+      controller: widget.controller,
+      focusNode: _focusNode,
+      obscureText: widget.isPassword ? _obscureText : false,
+      keyboardType: widget.keyboardType,
+      style: AppTextStyles.bodyMax,
+      validator: widget.validator,
+      maxLines: widget.isPassword ? 1 : widget.maxLines,
+      decoration: InputDecoration(
+        labelText: widget.labelAbove ? null : widget.label,
+        prefixIcon: AnimatedOpacity(
+          duration: const Duration(milliseconds: 300),
+          opacity: _isFocused ? 1.0 : 0.5,
+          child: Icon(
+            widget.prefixIcon,
+            color: _isFocused ? AppColors.sagePrimary : AppColors.textLight,
+          ),
+        ),
+        suffixIcon: widget.isPassword
+            ? IconButton(
+                onPressed: () => setState(() => _obscureText = !_obscureText),
+                icon: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  transitionBuilder: (Widget child, Animation<double> animation) {
+                    return FadeTransition(opacity: animation, child: ScaleTransition(scale: animation, child: child));
+                  },
+                  child: Icon(
+                    _obscureText ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                    key: ValueKey(_obscureText),
+                    color: _isFocused ? AppColors.sagePrimary : AppColors.textLight,
+                  ),
+                ),
+              )
+            : null,
+      ),
+    );
+
+    if (widget.labelAbove) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(left: 4, bottom: 6),
+            child: Text(
+              widget.label,
+              style: AppTextStyles.caption.copyWith(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: AppColors.sageDark,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.visible,
             ),
           ),
-          suffixIcon: widget.isPassword
-              ? IconButton(
-                  onPressed: () => setState(() => _obscureText = !_obscureText),
-                  icon: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 300),
-                    transitionBuilder: (Widget child, Animation<double> animation) {
-                      return FadeTransition(opacity: animation, child: ScaleTransition(scale: animation, child: child));
-                    },
-                    child: Icon(
-                      _obscureText ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                      key: ValueKey(_obscureText),
-                      color: _isFocused ? AppColors.sagePrimary : AppColors.textLight,
-                    ),
-                  ),
-                )
-              : null,
-        ),
-      ),
+          inputField,
+        ],
+      );
+    }
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      child: inputField,
     );
   }
 }

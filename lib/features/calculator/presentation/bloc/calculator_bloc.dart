@@ -7,6 +7,7 @@ import '../../data/models/livestock_yield_model.dart';
 import '../../data/models/calculator_summary_model.dart';
 import '../../data/models/predictive_forecast_model.dart';
 import '../../data/datasources/calculator_remote_data_source.dart';
+import '../../data/models/calculator_enums.dart';
 
 part 'calculator_event.dart';
 part 'calculator_state.dart';
@@ -22,6 +23,7 @@ class CalculatorBloc extends Bloc<CalculatorEvent, CalculatorState> {
     on<RecordYieldEvent>(_onRecordYield);
     on<FetchPredictiveForecastEvent>(_onFetchForecast);
     on<ActivatePremiumDebugEvent>(_onActivatePremium);
+    on<SaveSimulatedGroupEvent>(_onSaveSimulatedGroup);
   }
 
   Future<void> _onFetchSummary(
@@ -125,6 +127,49 @@ class CalculatorBloc extends Bloc<CalculatorEvent, CalculatorState> {
       await _repository.activatePremiumDebug();
       emit(const CalculatorActionSuccess(message: 'Премиум активирован!'));
       add(const FetchCalculatorSummaryEvent());
+    } catch (e) {
+      emit(CalculatorError(e.toString()));
+    }
+  }
+
+  Future<void> _onSaveSimulatedGroup(
+    SaveSimulatedGroupEvent event,
+    Emitter<CalculatorState> emit,
+  ) async {
+    emit(const CalculatorLoading());
+    try {
+      final createdAsset = await _repository.addAsset(event.asset);
+      
+      // If feedCost > 0, record the expense
+      if (event.feedCost > 0) {
+        await _repository.addExpense(LivestockExpenseModel(
+          id: 0,
+          assetId: createdAsset.id!,
+          feedSubType: FeedSubType.compoundFeed,
+          amount: event.feedCost,
+          description: 'Расчетный расход на корма из калькулятора',
+          date: DateTime.now(),
+        ));
+      }
+      
+      // If otherCost > 0, record the expense
+      if (event.otherCost > 0) {
+        await _repository.addExpense(LivestockExpenseModel(
+          id: 0,
+          assetId: createdAsset.id!,
+          otherSubType: OtherSubType.logistics,
+          amount: event.otherCost,
+          description: 'Расчетный расход на ветпрепараты и прочее из калькулятора',
+          date: DateTime.now(),
+        ));
+      }
+
+      emit(const CalculatorActionSuccess(
+        message: 'Моделирование сохранено в активную группу!',
+      ));
+      add(const FetchCalculatorSummaryEvent());
+    } on FreeLimitException {
+      emit(const CalculatorFreeLimitReachedState());
     } catch (e) {
       emit(CalculatorError(e.toString()));
     }

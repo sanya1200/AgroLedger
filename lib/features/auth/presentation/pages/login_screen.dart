@@ -6,8 +6,8 @@ import 'package:agroledger/core/theme/app_colors.dart';
 import 'package:agroledger/core/theme/app_text_styles.dart';
 import 'package:agroledger/core/presentation/widgets/soft_card.dart';
 import 'register_screen.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:agroledger/features/auth/presentation/widgets/google_sign_in_button.dart';
-import 'package:agroledger/features/auth/presentation/widgets/google_account_picker_dialog.dart';
 import 'package:agroledger/features/auth/presentation/widgets/google_registration_completion_dialog.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -48,20 +48,31 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _onGoogleSignIn() async {
-    final result = await showDialog<Map<String, String>>(
-      context: context,
-      barrierDismissible: true,
-      builder: (context) => const GoogleAccountPickerDialog(),
-    );
+    setState(() {
+      _isGoogleAction = true;
+    });
 
-    if (result != null) {
-      final email = result['email']!;
-      final name = result['name']!;
+    try {
+      final GoogleSignIn googleSignIn = GoogleSignIn(
+        scopes: ['email', 'profile'],
+      );
+      
+      final GoogleSignInAccount? account = await googleSignIn.signIn();
+      if (account == null) {
+        setState(() {
+          _isGoogleAction = false;
+        });
+        return;
+      }
+
+      final email = account.email;
+      final name = account.displayName ?? 'Google User';
+
       setState(() {
         _googleEmail = email;
         _googleName = name;
-        _isGoogleAction = true;
       });
+
       if (mounted) {
         context.read<AuthBloc>().add(
               AuthGoogleSignInRequested(
@@ -70,7 +81,71 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             );
       }
+    } catch (e) {
+      setState(() {
+        _isGoogleAction = false;
+      });
+      if (mounted) {
+        final errorString = e.toString();
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            backgroundColor: AppColors.creamBackground,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+            title: const Text('Ошибка авторизации Google'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Не удалось выполнить вход через SDK Google. Возможная причина: отсутствие конфигурации OAuth (SHA-1) для данного устройства.',
+                  style: AppTextStyles.bodyMedium,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Детали ошибки:\n$errorString',
+                  style: AppTextStyles.caption.copyWith(color: AppColors.errorSoft, fontWeight: FontWeight.bold),
+                ),
+                const Divider(height: 24),
+                Text(
+                  'Хотите использовать отладочный вход с тестовым аккаунтом?',
+                  style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Отмена'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _useFallbackSignIn();
+                },
+                child: const Text('Вход без SDK'),
+              ),
+            ],
+          ),
+        );
+      }
     }
+  }
+
+  void _useFallbackSignIn() {
+    const email = 'test.agro.farmer@gmail.com';
+    const name = 'Алексей Фермер';
+    setState(() {
+      _googleEmail = email;
+      _googleName = name;
+      _isGoogleAction = true;
+    });
+    context.read<AuthBloc>().add(
+          const AuthGoogleSignInRequested(
+            email: email,
+            fullName: name,
+          ),
+        );
   }
 
   Future<void> _showRegistrationCompletionDialog() async {

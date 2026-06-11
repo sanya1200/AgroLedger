@@ -13,7 +13,13 @@ abstract class AuthRemoteDataSource {
     required String role,
     String? fullName,
   });
-  Future<UserModel> updateSettings({bool? isBiometricEnabled, String? fullName});
+  Future<UserModel> updateSettings({
+    bool? isBiometricEnabled,
+    String? fullName,
+    String? phone,
+    String? role,
+  });
+  Future<UserModel> verifyUser();
   Future<void> deleteAccount();
   Future<UserModel> getMe();
   Future<void> setupPin(String pinCode);
@@ -102,13 +108,20 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   }
 
   @override
-  Future<UserModel> updateSettings({bool? isBiometricEnabled, String? fullName}) async {
+  Future<UserModel> updateSettings({
+    bool? isBiometricEnabled,
+    String? fullName,
+    String? phone,
+    String? role,
+  }) async {
     try {
       final response = await _client.dio.patch(
         'auth/update-settings',
         data: {
           if (isBiometricEnabled != null) 'is_biometric_enabled': isBiometricEnabled,
           if (fullName != null) 'full_name': fullName,
+          if (phone != null) 'phone': phone,
+          if (role != null) 'role': role,
         },
       );
 
@@ -117,6 +130,23 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         return UserModel.fromJson(Map<String, dynamic>.from(data['data']));
       } else {
         throw data?['error'] ?? 'Ошибка обновления настроек';
+      }
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  @override
+  Future<UserModel> verifyUser() async {
+    try {
+      final response = await _client.dio.post('auth/verify-user');
+      final data = response.data;
+      if (data != null && data['success'] == true) {
+        return UserModel.fromJson(Map<String, dynamic>.from(data['data']));
+      } else {
+        throw data?['error'] ?? 'Ошибка верификации';
       }
     } on DioException catch (e) {
       throw _handleDioError(e);

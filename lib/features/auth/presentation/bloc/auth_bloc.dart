@@ -33,6 +33,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<AuthLogoutRequested>(_onLogoutRequested);
     on<AuthDeleteAccountRequested>(_onDeleteAccountRequested);
     on<AuthUpdateSettingsRequested>(_onUpdateSettingsRequested);
+    on<AuthVerifyUserRequested>(_onVerifyUserRequested);
     on<AuthSessionExpired>(_onSessionExpired);
     on<AuthGoogleSignInRequested>(_onGoogleSignInRequested);
   }
@@ -45,7 +46,35 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       final user = await _authRemoteDataSource.updateSettings(
         isBiometricEnabled: event.isBiometricEnabled,
         fullName: event.fullName,
+        phone: event.phone,
+        role: event.role,
       );
+      // Cache user profile
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('cached_user_profile', jsonEncode(user.toJson()));
+      } catch (cacheError) {
+        dev.log('Failed to save user to cache', error: cacheError);
+      }
+      emit(state.copyWith(user: user));
+    } catch (e) {
+      emit(state.copyWith(errorMessage: e.toString()));
+    }
+  }
+
+  Future<void> _onVerifyUserRequested(
+    AuthVerifyUserRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    try {
+      final user = await _authRemoteDataSource.verifyUser();
+      // Cache user profile
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('cached_user_profile', jsonEncode(user.toJson()));
+      } catch (cacheError) {
+        dev.log('Failed to save user to cache', error: cacheError);
+      }
       emit(state.copyWith(user: user));
     } catch (e) {
       emit(state.copyWith(errorMessage: e.toString()));

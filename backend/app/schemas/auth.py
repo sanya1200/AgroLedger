@@ -44,6 +44,15 @@ class PinSetupRequest(BaseModel):
 class UpdateSettingsRequest(BaseModel):
     is_biometric_enabled: Optional[bool] = None
     full_name: Optional[str] = None
+    phone: Optional[str] = None
+    role: Optional[str] = None
+
+    @field_validator("phone")
+    @classmethod
+    def validate_phone(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and not re.match(r'^\+?[1-9]\d{1,14}$', v):
+            raise ValueError("Invalid phone format")
+        return v
 
 class TokenResponse(BaseModel):
     access_token: str

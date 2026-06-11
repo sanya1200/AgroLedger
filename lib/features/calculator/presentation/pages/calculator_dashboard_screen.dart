@@ -19,6 +19,7 @@ import 'package:agroledger/core/di/service_locator.dart';
 import 'package:agroledger/features/calculator/presentation/widgets/add_asset_sheet.dart';
 import 'package:agroledger/features/calculator/presentation/widgets/vet_tasks_widget.dart';
 import 'package:agroledger/features/home/presentation/pages/premium_hub_screen.dart';
+import 'package:agroledger/features/calculator/presentation/widgets/quick_calculator_tab.dart';
 
 class CalculatorDashboardScreen extends StatefulWidget {
   const CalculatorDashboardScreen({super.key});
@@ -36,6 +37,7 @@ class _CalculatorDashboardScreenState extends State<CalculatorDashboardScreen> {
   final _currencyFormat = NumberFormat('#,##0', 'ru_RU');
   final _dateFormat = DateFormat('dd.MM.yyyy');
   bool _isExporting = false;
+  int _currentTab = 0;
 
   @override
   void initState() {
@@ -201,6 +203,49 @@ class _CalculatorDashboardScreenState extends State<CalculatorDashboardScreen> {
     );
   }
 
+  Widget _buildTabButton(int index, String title, IconData icon) {
+    final isSelected = _currentTab == index;
+    return GestureDetector(
+      onTap: () => setState(() => _currentTab = index),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.sagePrimary : Colors.transparent,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: AppColors.sagePrimary.withValues(alpha: 0.2),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  )
+                ]
+              : null,
+        ),
+        margin: const EdgeInsets.all(3),
+        alignment: Alignment.center,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 18,
+              color: isSelected ? Colors.white : AppColors.textLight,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              title,
+              style: AppTextStyles.bodyMedium.copyWith(
+                fontWeight: FontWeight.bold,
+                color: isSelected ? Colors.white : AppColors.textDark,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -208,123 +253,176 @@ class _CalculatorDashboardScreenState extends State<CalculatorDashboardScreen> {
       appBar: AppBar(
         title: const Text('Умный калькулятор'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.add_circle_outline_rounded),
-            tooltip: 'Добавить группу',
-            onPressed: () => AddAssetSheet.show(context),
-          ),
-          BlocBuilder<CalculatorBloc, CalculatorState>(
-            builder: (context, state) {
-              final summary = state is CalculatorSummaryLoaded
-                  ? state.summary
-                  : _cachedLoadedState?.summary;
-              return IconButton(
-                icon: _isExporting
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: AppColors.sagePrimary,
-                        ),
-                      )
-                    : const Icon(Icons.ios_share_rounded),
-                tooltip: 'Экспорт отчёта',
-                onPressed: summary == null || _isExporting
-                    ? null
-                    : () => _exportReport(summary),
-              );
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.refresh_rounded),
-            tooltip: 'Обновить',
-            onPressed: () => _reloadSummary(assetId: _selectedAssetId),
-          ),
+          if (_currentTab == 1) ...[
+            IconButton(
+              icon: const Icon(Icons.add_circle_outline_rounded),
+              tooltip: 'Добавить группу',
+              onPressed: () => AddAssetSheet.show(context),
+            ),
+            BlocBuilder<CalculatorBloc, CalculatorState>(
+              builder: (context, state) {
+                final summary = state is CalculatorSummaryLoaded
+                    ? state.summary
+                    : _cachedLoadedState?.summary;
+                return IconButton(
+                  icon: _isExporting
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppColors.sagePrimary,
+                          ),
+                        )
+                      : const Icon(Icons.ios_share_rounded),
+                  tooltip: 'Экспорт отчёта',
+                  onPressed: summary == null || _isExporting
+                      ? null
+                      : () => _exportReport(summary),
+                );
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.refresh_rounded),
+              tooltip: 'Обновить',
+              onPressed: () => _reloadSummary(assetId: _selectedAssetId),
+            ),
+          ],
         ],
       ),
-      body: BlocConsumer<CalculatorBloc, CalculatorState>(
-        listenWhen: (previous, current) =>
-            current is CalculatorActionSuccess || current is CalculatorError || current is CalculatorFreeLimitReachedState || current is CalculatorPremiumLockedState,
-        listener: (context, state) {
-          if (state is CalculatorActionSuccess) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: AppColors.sagePrimary,
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            child: Container(
+              height: 48,
+              decoration: BoxDecoration(
+                color: AppColors.sageLight.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(16),
               ),
-            );
-          } else if (state is CalculatorFreeLimitReachedState) {
-            _showPremiumPaywall(
-              context,
-              title: 'Лимит групп достигнут',
-              message: 'В бесплатной версии можно вести учет до 5 групп одновременно. Перейдите на Premium, чтобы добавить больше!',
-            );
-          } else if (state is CalculatorPremiumLockedState) {
-            _showPremiumPaywall(
-              context,
-              title: 'Доступ ограничен',
-              message: 'Функция "${state.featureName}" доступна только владельцам Premium-подписки.',
-            );
-          }
-        },
-        builder: (context, state) {
-          if (state is CalculatorSummaryLoaded) {
-            _cachedLoadedState = state;
-          }
-
-          if (state is CalculatorLoading && _cachedLoadedState == null) {
-            return const _LoadingView();
-          }
-
-          if (state is CalculatorError && _cachedLoadedState == null) {
-            return _ErrorView(
-              message: state.message,
-              onRetry: () => _reloadSummary(assetId: _selectedAssetId),
-            );
-          }
-
-          if (state is CalculatorError && _cachedLoadedState != null) {
-            return Stack(
-              children: [
-                _buildLoadedContent(_cachedLoadedState!),
-                _ErrorBanner(
-                  message: state.message,
-                  onRetry: () => _reloadSummary(assetId: _selectedAssetId),
-                ),
-              ],
-            );
-          }
-
-          final loadedState = state is CalculatorSummaryLoaded
-              ? state
-              : _cachedLoadedState;
-
-          if (loadedState != null) {
-            return Stack(
-              children: [
-                _buildLoadedContent(loadedState),
-                if (state is CalculatorLoading)
-                  const Positioned(
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    child: LinearProgressIndicator(
-                      minHeight: 3,
-                      backgroundColor: Colors.transparent,
-                      color: AppColors.sagePrimary,
-                    ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _buildTabButton(0, 'Быстрый расчет', Icons.calculate_outlined),
                   ),
-              ],
-            );
-          }
+                  Expanded(
+                    child: _buildTabButton(1, 'Мой учет', Icons.inventory_2_outlined),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Expanded(
+            child: BlocConsumer<CalculatorBloc, CalculatorState>(
+              listenWhen: (previous, current) =>
+                  current is CalculatorActionSuccess || current is CalculatorError || current is CalculatorFreeLimitReachedState || current is CalculatorPremiumLockedState,
+              listener: (context, state) {
+                if (state is CalculatorActionSuccess) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(state.message),
+                      backgroundColor: AppColors.sagePrimary,
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                  );
+                } else if (state is CalculatorFreeLimitReachedState) {
+                  _showPremiumPaywall(
+                    context,
+                    title: 'Лимит групп достигнут',
+                    message: 'В бесплатной версии можно вести учет до 5 групп одновременно. Перейдите на Premium, чтобы добавить больше!',
+                  );
+                } else if (state is CalculatorPremiumLockedState) {
+                  _showPremiumPaywall(
+                    context,
+                    title: 'Доступ ограничен',
+                    message: 'Функция "${state.featureName}" доступна только владельцам Premium-подписки.',
+                  );
+                }
+              },
+              builder: (context, state) {
+                if (state is CalculatorSummaryLoaded) {
+                  _cachedLoadedState = state;
+                }
 
-          return const _LoadingView();
-        },
+                if (_currentTab == 0) {
+                  return Stack(
+                    children: [
+                      QuickCalculatorTab(
+                        onSimulationSaved: () {
+                          setState(() {
+                            _currentTab = 1;
+                            _selectedAssetId = null;
+                            _selectedCategory = null;
+                          });
+                        },
+                      ),
+                      if (state is CalculatorLoading)
+                        Positioned.fill(
+                          child: Container(
+                            color: Colors.white24,
+                            child: const Center(
+                              child: CircularProgressIndicator(color: AppColors.sagePrimary),
+                            ),
+                          ),
+                        ),
+                    ],
+                  );
+                }
+
+                if (state is CalculatorLoading && _cachedLoadedState == null) {
+                  return const _LoadingView();
+                }
+
+                if (state is CalculatorError && _cachedLoadedState == null) {
+                  return _ErrorView(
+                    message: state.message,
+                    onRetry: () => _reloadSummary(assetId: _selectedAssetId),
+                  );
+                }
+
+                if (state is CalculatorError && _cachedLoadedState != null) {
+                  return Stack(
+                    children: [
+                      _buildLoadedContent(_cachedLoadedState!),
+                      _ErrorBanner(
+                        message: state.message,
+                        onRetry: () => _reloadSummary(assetId: _selectedAssetId),
+                      ),
+                    ],
+                  );
+                }
+
+                final loadedState = state is CalculatorSummaryLoaded
+                    ? state
+                    : _cachedLoadedState;
+
+                if (loadedState != null) {
+                  return Stack(
+                    children: [
+                      _buildLoadedContent(loadedState),
+                      if (state is CalculatorLoading)
+                        const Positioned(
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          child: LinearProgressIndicator(
+                            minHeight: 3,
+                            backgroundColor: Colors.transparent,
+                            color: AppColors.sagePrimary,
+                          ),
+                        ),
+                    ],
+                  );
+                }
+
+                return const _LoadingView();
+              },
+            ),
+          ),
+        ],
       ),
     );
   }

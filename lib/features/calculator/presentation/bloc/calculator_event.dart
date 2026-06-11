@@ -50,3 +50,18 @@ class FetchPredictiveForecastEvent extends CalculatorEvent {
 }
 
 class ActivatePremiumDebugEvent extends CalculatorEvent {}
+
+class SaveSimulatedGroupEvent extends CalculatorEvent {
+  final LivestockAssetModel asset;
+  final double feedCost;
+  final double otherCost;
+
+  const SaveSimulatedGroupEvent({
+    required this.asset,
+    required this.feedCost,
+    required this.otherCost,
+  });
+
+  @override
+  List<Object?> get props => [asset, feedCost, otherCost];
+}

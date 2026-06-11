@@ -59,12 +59,21 @@ class AuthBiometricSignInRequested extends AuthEvent {}
 class AuthUpdateSettingsRequested extends AuthEvent {
   final bool? isBiometricEnabled;
   final String? fullName;
+  final String? phone;
+  final String? role;
 
-  const AuthUpdateSettingsRequested({this.isBiometricEnabled, this.fullName});
+  const AuthUpdateSettingsRequested({
+    this.isBiometricEnabled,
+    this.fullName,
+    this.phone,
+    this.role,
+  });
 
   @override
-  List<Object?> get props => [isBiometricEnabled, fullName];
+  List<Object?> get props => [isBiometricEnabled, fullName, phone, role];
 }
+
+class AuthVerifyUserRequested extends AuthEvent {}
 
 class AuthLogoutRequested extends AuthEvent {}
 
